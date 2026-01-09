@@ -158,31 +158,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     splideAll = new Splide("#carousel-all", {
       type: "loop",
-      autoplay: true,
-      interval: 3000,
-      pauseOnHover: true,
       perPage: 3,
       gap: "1rem",
       pagination: false,
+      perMove: 1,
+      Speed: 300,
+      easing: "linear",
+      lazyLoad: "nearby",
+      rewind: true,
       breakpoints: {
         900: { perPage: 2 },
         600: { perPage: 1 },
+        768: {
+    perPage: 1,
+    arrows: false
+  }
       },
     }).mount();
 
+
     if (carouselDecor && carouselDecor.style.display !== "none") {
       splideDecor = new Splide("#carousel-decor", {
-        type: "loop",
-        autoplay: true,
-        interval: 3000,
-        pauseOnHover: true,
-        perPage: 3,
-        gap: "1rem",
-        pagination: false,
-        breakpoints: {
-          900: { perPage: 2 },
-          600: { perPage: 1 },
-        },
+      type: "loop",
+      perPage: 3,
+      gap: "1rem",
+      pagination: false,
+      perMove: 1,
+      Speed: 300,
+      easing: "linear",
+      lazyLoad: "nearby",
+      rewind: true,
+      breakpoints: {
+        900: { perPage: 2 },
+        600: { perPage: 1 },
+        768: {
+    perPage: 1,
+    arrows: false
+  }
+      },
       }).mount();
     }
   }
@@ -221,14 +234,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     splideRelated = new Splide("#carousel-related", {
       type: "loop",
-      autoplay: true,
-      interval: 3000,
       perPage: 3,
       gap: "1rem",
       pagination: false,
+      perMove: 1,
+      Speed: 300,
+      easing: "linear",
+      lazyLoad: "nearby",
+      rewind: true,
       breakpoints: {
         900: { perPage: 2 },
         600: { perPage: 1 },
+        768: {
+    perPage: 1,
+    arrows: false
+  }
       },
     }).mount();
   }
