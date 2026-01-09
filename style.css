@@ -221,19 +221,13 @@ body {
   display: flex;
   flex-direction: column;
   background: #fff;
-  border-radius: 16px;
-  overflow: hidden; /* IMPORTANTE */
+  border-radius: 12px; /* pode até reduzir mais se quiser */
+  overflow: hidden;
   text-decoration: none;
   color: #111;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-
-.product-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 35px rgba(0,0,0,0.15);
-}
-
+/* REMOVIDO: hover, transform, box-shadow, transition */
 
 .product-card img {
   width: 100%;
@@ -242,7 +236,7 @@ body {
   display: block;
 }
 
-
+/* Evita repaints desnecessários */
 .product-card-content {
   padding: 12px 14px;
   display: flex;
@@ -254,12 +248,14 @@ body {
 .product-card-content h3 {
   font-size: 15px;
   line-height: 1.2;
+  margin: 0;
 }
 
 .product-card-content span {
   font-weight: 600;
-  color: #16a34a; /* verde de preço */
+  color: #16a34a;
 }
+
 
 /* ================= BOTÃO ================= */
 .button {
@@ -356,44 +352,43 @@ body {
 /* ================= RECOMENDADOS (PÁGINA PRODUTO) ================= */
 
 .recomendados h2 {
-padding-left: 25px;
+  padding-left: 25px;
 }
 
 #carousel-related {
   margin-top: 60px;
 }
 
+/* NÃO força overflow visible no track (isso pesa no slider) */
 #carousel-related .splide__track {
-  overflow: visible;
+  overflow: hidden;
 }
 
+/* Slide simples, sem centralizações pesadas */
 #carousel-related .splide__slide {
-  display: flex;
-  justify-content: center;
-  max-width: 320px; /* controla o tamanho do card */
+  max-width: 320px;
 }
 
+/* CARD */
 #carousel-related .product-card {
   width: 100%;
   max-width: 320px;
   background: #fff;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-#carousel-related .product-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.15);
-}
+/* REMOVIDO: hover, transform, box-shadow, transition */
 
+/* IMAGEM */
 #carousel-related .product-card img {
   width: 100%;
-  aspect-ratio: 4 / 3; /* mantém 1024x768 certinho */
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   display: block;
 }
 
+/* CONTEÚDO */
 #carousel-related .product-card-content {
   padding: 12px 14px;
   display: flex;
@@ -404,6 +399,7 @@ padding-left: 25px;
 #carousel-related .product-card-content h3 {
   font-size: 15px;
   line-height: 1.2;
+  margin: 0;
 }
 
 #carousel-related .product-card-content span {
@@ -411,26 +407,14 @@ padding-left: 25px;
   color: #16a34a;
 }
 
-/* SOMENTE RECOMENDADOS */
-#carousel-related,
-#carousel-related .splide__track,
-#carousel-related .splide__slide {
-  overflow: visible;
-}
+/* ================= OUTROS CARROSSEIS ================= */
 
-/* SOMENTE RECOMENDADOS */
-#carousel-all,
+/* Evita overflow visível desnecessário */
 #carousel-all .splide__track,
-#carousel-all .splide__slide {
-  overflow: visible;
+#carousel-decor .splide__track {
+  overflow: hidden;
 }
 
-/* SOMENTE RECOMENDADOS */
-#carousel-decor,
-#carousel-decor .splide__track,
-#carousel-decor .splide__slide {
-  overflow: visible;
-}
 
 
 /*======================================= FOOTER ============================*/
