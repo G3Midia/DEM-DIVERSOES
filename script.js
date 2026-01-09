@@ -168,10 +168,10 @@ document.addEventListener("DOMContentLoaded", () => {
       rewind: true,
       breakpoints: {
         900: { perPage: 2 },
-        600: { perPage: 1 },
-        768: {
-    perPage: 1,
-    arrows: false
+    600: {
+      perPage: 1,
+      padding: { left: "1.5rem", right: "1.5rem" },
+      gap: "0.8rem",
   }
       },
     }).mount();
@@ -190,10 +190,11 @@ document.addEventListener("DOMContentLoaded", () => {
       rewind: true,
       breakpoints: {
         900: { perPage: 2 },
-        600: { perPage: 1 },
-        768: {
-    perPage: 1,
-    arrows: false
+    600: {
+      perPage: 1,
+      padding: { left: "1.5rem", right: "1.5rem" },
+      gap: "0.8rem",
+  
   }
       },
       }).mount();
@@ -244,10 +245,10 @@ document.addEventListener("DOMContentLoaded", () => {
       rewind: true,
       breakpoints: {
         900: { perPage: 2 },
-        600: { perPage: 1 },
-        768: {
-    perPage: 1,
-    arrows: false
+    600: {
+      perPage: 1,
+      padding: { left: "1.5rem", right: "1.5rem" },
+      gap: "0.8rem",
   }
       },
     }).mount();
