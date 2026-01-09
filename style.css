@@ -225,6 +225,7 @@ body {
   overflow: hidden;
   text-decoration: none;
   color: #111;
+  margin: 0px;
 }
 
 /* REMOVIDO: hover, transform, box-shadow, transition */
@@ -376,6 +377,7 @@ body {
   background: #fff;
   border-radius: 12px;
   overflow: hidden;
+  margin: 0px;
 }
 
 /* REMOVIDO: hover, transform, box-shadow, transition */
