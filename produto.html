@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Produto | Catálogo</title>
+
+  <!-- Splide CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
+
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.png" type="image/png">
+
+  
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+/>
+</head>
+
+<body>
+
+  <!-- ================= NAV ================= -->
+  <nav class="nav">
+    <a href="index.html" class="nav-back">
+      ← Voltar ao catálogo
+    </a>
+  </nav>
+
+  <!-- ================= PRODUTO ================= -->
+  <main class="product">
+
+    <!-- ===== CARROSSEL DE IMAGENS ===== -->
+    <section class="product-gallery">
+      <div id="splide-product" class="splide">
+        <div class="splide__track">
+          <ul class="splide__list" id="product-images">
+            <!-- JS INJETA AS IMAGENS -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== INFORMAÇÕES ===== -->
+    <section class="product-info">
+
+      <h1 id="product-name" class="product-title">
+        <!-- Nome do produto -->
+      </h1>
+
+      <p id="product-price" class="product-price">
+        <!-- Preço -->
+      </p>
+
+      <p id="product-description" class="product-description">
+        <!-- Descrição -->
+      </p>
+
+      <a
+        id="product-whatsapp"
+        href="#"
+        target="_blank"
+        class="product-button"
+      >
+        Entrar em contato no WhatsApp
+      </a>
+
+    </section>
+
+  </main>
+
+  <!-- ================= RECOMENDADOS ================= -->
+  <section class="recomendados">
+  <h2>Você também pode gostar</h2>
+
+  <div id="carousel-related" class="splide">
+  <div class="splide__track">
+    <ul class="splide__list"></ul>
+  </div>
+</div>
+
+<!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <!-- PARTE SUPERIOR -->
+  <div class="footer-top">
+    <img
+      src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+      alt="Logo da empresa"
+      class="footer-client-logo"
+    />
+
+    <div class="footer-social">
+      <a href="https://wa.me/5569992329825" target="_blank" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+      </a>
+
+      <a href="https://www.facebook.com/profile.php?id=100070061812267#" target="_blank" aria-label="Facebook">
+        <i class="fab fa-facebook-f"></i>
+      </a>
+
+      <a href="https://instagram.com/dem_diversoes" target="_blank" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- PARTE INFERIOR -->
+  <div class="footer-bottom">
+    <span>
+      © <span id="year"></span> Todos os direitos reservados
+    </span>
+
+    <span class="footer-dev">
+      Site desenvolvido por
+      <a href="https://wa.me/5569993053507" target="_blank">
+        <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767966176/Horizontal_Red_ai5o98.svg" alt="Sua marca">
+      </a>
+    </span>
+  </div>
+</footer>
+
+
+  <!-- ================= SCRIPTS ================= -->
+
+  <!-- Splide JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+
+  <!-- JS principal -->
+  <script src="script.js"></script>
+
+</body>
+</html>

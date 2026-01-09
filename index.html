@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
+  <title>D&M Diversões</title>
+
+  <!-- Splide CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"
+  />
+
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="style.css" />
+
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+/>
+
+</head>
+
+<body>
+
+  <!-- ================= HERO ================= -->
+  <header
+    class="hero"
+    style="background-image: url('https://res.cloudinary.com/djvploeu9/image/upload/v1767963355/HERO_btz991.jpg')"
+  >
+    <div class="hero-content">
+      <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png" alt="Logo" class="hero-logo"/>
+      <h1>Aluguel de Artigos para Festas</h1>
+      <p>
+        Brinquedos, decorações e tudo o que você precisa para uma festa
+        inesquecível
+      </p>
+      <a href="#search" class="hero-button">
+  Ver itens disponíveis
+</a>
+
+    </div>
+  </header>
+
+  <!-- ================= PESQUISA ================= -->
+<div class="search-container" id="search">
+  <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input
+      type="search"
+      id="searchInput"
+      placeholder="Buscar por nome ou descrição..."
+    />
+  </div>
+</div>
+
+
+
+  <!-- ================= CARROSSEL PRINCIPAL ================= -->
+  <section class="section">
+    <h2 class="section-title">Itens disponíveis</h2>
+
+    <div id="carousel-all" class="splide">
+      <div class="splide__track">
+        <ul class="splide__list">
+          <!-- JS INJETA OS ITENS -->
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CARROSSEL DECORAÇÕES ================= -->
+  <section class="section">
+    <h2 class="section-title">Decorações</h2>
+
+    <div id="carousel-decor" class="splide">
+      <div class="splide__track">
+        <ul class="splide__list">
+          <!-- JS INJETA AS DECORAÇÕES -->
+        </ul>
+      </div>
+    </div>
+  </section>
+
+
+    <!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <!-- PARTE SUPERIOR -->
+  <div class="footer-top">
+    <img
+      src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+      alt="Logo da empresa"
+      class="footer-client-logo"
+    />
+
+    <div class="footer-social">
+      <a href="https://wa.me/5569992329825" target="_blank" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+      </a>
+
+      <a href="https://www.facebook.com/profile.php?id=100070061812267#" target="_blank" aria-label="Facebook">
+        <i class="fab fa-facebook-f"></i>
+      </a>
+
+      <a href="https://instagram.com/dem_diversoes" target="_blank" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- PARTE INFERIOR -->
+  <div class="footer-bottom">
+    <span>
+      © <span id="year"></span> Todos os direitos reservados
+    </span>
+
+    <span class="footer-dev">
+      Site desenvolvido por
+      <a href="https://wa.me/5569993053507" target="_blank">
+        <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767966176/Horizontal_Red_ai5o98.svg" alt="Sua marca">
+      </a>
+    </span>
+  </div>
+</footer>
+
+
+  <!-- ================= SCRIPTS ================= -->
+
+  <!-- Splide JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide/dist/js/splide.min.js"></script>
+
+
+  <!-- JS principal -->
+  <script src="script.js"></script>
+
+</body>
+</html>
