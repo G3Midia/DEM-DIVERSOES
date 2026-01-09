@@ -196,7 +196,7 @@ body {
 /* mobile */
 @media (max-width: 768px) {
   .search-box {
-    width: 80%;
+    width: 90%;
   }
 }
 
@@ -487,3 +487,4 @@ body {
 .footer-dev a:hover img {
   transform: scale(1.1);
 }
+
