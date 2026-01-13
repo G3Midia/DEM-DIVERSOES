@@ -54,13 +54,13 @@ document.addEventListener("DOMContentLoaded", () => {
           nome,
           categoria: normalize(categoria),
           subcategorias: subcategoria
-            .split("|")
+            .split(",")
             .map((s) => normalize(s))
             .filter(Boolean),
           preco,
           descricao,
           imagens: imagens
-            .split("|")
+            .split(",")
             .map((i) => i.trim())
             .filter(Boolean),
         };
@@ -205,7 +205,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderRelated() {
     relatedList.innerHTML = "";
 
-    const related =
+    const relatedSource =
       currentProduct.categoria === "decoracoes"
         ? products.filter(
             (p) =>
@@ -213,6 +213,21 @@ document.addEventListener("DOMContentLoaded", () => {
               p.id !== currentProduct.id
           )
         : products.filter((p) => p.id !== currentProduct.id);
+
+    const currentSubcats = new Set(currentProduct.subcategorias);
+    const scoreRelated = (p) => {
+      let score = 0;
+      if (p.categoria === currentProduct.categoria) score += 3;
+      p.subcategorias.forEach((sub) => {
+        if (currentSubcats.has(sub)) score += 1;
+      });
+      return score;
+    };
+
+    const related = relatedSource
+      .map((p) => ({ p, score: scoreRelated(p) }))
+      .sort((a, b) => b.score - a.score)
+      .map(({ p }) => p);
 
     related.forEach((p) => {
       relatedList.insertAdjacentHTML(
@@ -280,3 +295,4 @@ document.addEventListener("DOMContentLoaded", () => {
     renderHome(filtered, true);
   });
 });
+
