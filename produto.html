@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>Produto | Catálogo</title>
-    <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
-
 
   <!-- Splide CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css">
@@ -14,7 +12,8 @@
   <!-- CSS principal -->
   <link rel="stylesheet" href="style.css">
 
-
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.png" type="image/png">
 
   
 <link
@@ -25,12 +24,30 @@
 
 <body>
 
-  <!-- ================= NAV ================= -->
-  <nav class="nav">
-    <a href="index.html" class="nav-back">
-      ← Voltar ao catálogo
-    </a>
-  </nav>
+    <!-- ================= NAV ================= -->
+  <header class="site-header">
+    <nav class="site-nav">
+      <a class="nav-logo" href="index.html" aria-label="D&M Diversões">
+        <img
+          src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+          alt="Logo da empresa"
+        />
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <ul class="nav-menu" id="nav-menu">
+        <li><a href="index.html">Voltar ao início</a></li>
+        <li><a href="index.html#itens">Itens disponíveis</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
+      </ul>
+    </nav>
+  </header>
 
   <!-- ================= PRODUTO ================= -->
   <main class="product">
