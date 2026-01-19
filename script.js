@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const carouselDecor = document.getElementById("carousel-decor");
   const searchInput = document.getElementById("searchInput");
+  const hero = document.querySelector(".hero");
 
   const imagesEl = document.getElementById("product-images");
 
@@ -21,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let splideAll = null;
   let splideDecor = null;
   let splideRelated = null;
+  let isSearchFocused = false;
 
   const normalize = (str = "") =>
     str
@@ -270,11 +272,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ================= PESQUISA ================= */
+  const setHeroHidden = (hidden) => {
+    if (!hero) return;
+    hero.style.display = hidden ? "none" : "";
+  };
+
+  searchInput?.addEventListener("focus", () => {
+    isSearchFocused = true;
+    setHeroHidden(true);
+  });
+
+  searchInput?.addEventListener("blur", () => {
+    isSearchFocused = false;
+    const term = normalize(searchInput.value);
+    if (!term) setHeroHidden(false);
+  });
+
   searchInput?.addEventListener("input", () => {
     const term = normalize(searchInput.value);
 
     if (!term) {
       renderHome(products);
+      if (!isSearchFocused) setHeroHidden(false);
       return;
     }
 
@@ -293,6 +312,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     renderHome(filtered, true);
+    setHeroHidden(true);
+  });
+
+  /* ================= NAV ================= */
+  const navToggle = document.querySelector(".nav-toggle");
+  const navMenu = document.querySelector(".nav-menu");
+  if (navToggle && navMenu) {
+    navToggle.addEventListener("click", () => {
+      const isOpen = navMenu.classList.toggle("is-open");
+      navToggle.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    navMenu.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        navMenu.classList.remove("is-open");
+        navToggle.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+  /* ================= FAQ ================= */
+  const faqButtons = document.querySelectorAll(".faq-question");
+  faqButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const answerId = btn.getAttribute("aria-controls");
+      const answer = answerId ? document.getElementById(answerId) : null;
+      const isOpen = btn.getAttribute("aria-expanded") === "true";
+
+      btn.setAttribute("aria-expanded", String(!isOpen));
+      const icon = btn.querySelector(".faq-icon");
+      if (icon) icon.textContent = isOpen ? "+" : "-";
+      if (answer) answer.hidden = isOpen;
+    });
   });
 });
 
