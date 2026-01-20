@@ -18,12 +18,15 @@ body {
   font-family: 'Inter', sans-serif;
   background: linear-gradient(180deg, #020617, #0f172a);
   color: var(--text);
+  padding-top: 68px;
 }
 
 /* ================= NAV ================= */
 .site-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   background: rgba(2, 6, 23, 0.75);
   backdrop-filter: blur(10px);
@@ -227,6 +230,7 @@ body {
   background-color: #020617;
   display: flex;
   justify-content: center;
+  scroll-margin-top: 84px;
 }
 
 /* wrapper */
@@ -278,6 +282,7 @@ body {
   padding: 60px 20px;
   max-width: 1200px;
   margin: auto;
+  scroll-margin-top: 84px;
 }
 
 .section-title {
@@ -290,6 +295,7 @@ body {
   padding: 60px 20px;
   max-width: 900px;
   margin: auto;
+  scroll-margin-top: 84px;
 }
 
 .faq-list {
