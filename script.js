@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const carouselDecor = document.getElementById("carousel-decor");
   const searchInput = document.getElementById("searchInput");
+  const searchBox = document.querySelector(".search-box");
   const hero = document.querySelector(".hero");
 
   const imagesEl = document.getElementById("product-images");
@@ -313,6 +314,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderHome(filtered, true);
     setHeroHidden(true);
+  });
+
+  const blurSearchOnOutsidePress = (event) => {
+    if (!searchInput || !searchBox) return;
+    if (document.activeElement !== searchInput) return;
+    if (searchBox.contains(event.target)) return;
+    searchInput.blur();
+  };
+
+  document.addEventListener("pointerdown", blurSearchOnOutsidePress, {
+    passive: true,
   });
 
   /* ================= NAV ================= */
