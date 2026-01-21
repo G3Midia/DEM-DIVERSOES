@@ -1,367 +1,684 @@
-document.addEventListener("DOMContentLoaded", () => {
-  if ("scrollRestoration" in history) {
-    history.scrollRestoration = "manual";
-  }
-  window.scrollTo(0, 0);
+/* ================= RESET ================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-  const params = new URLSearchParams(window.location.search);
-  const productId = params.get("id");
+:root {
+  --bg: #0f172a;
+  --card: #111827;
+  --primary: #22c55e;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --radius: 16px;
+}
 
-  const sheetUrl =
-    "https://docs.google.com/spreadsheets/d/13nL3fx9jp84DIKGr516nteMEFPCfLvtlrzlZlVzibdA/gviz/tq?tqx=out:json";
+html {
+  scroll-behavior: smooth;
+}
 
-  /* ================= ELEMENTOS ================= */
-  const allList = document.querySelector("#carousel-all .splide__list");
-  const decorList = document.querySelector("#carousel-decor .splide__list");
-  const relatedList = document.querySelector("#carousel-related .splide__list");
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(180deg, #020617, #0f172a);
+  color: var(--text);
+}
 
-  const carouselDecor = document.getElementById("carousel-decor");
-  const searchInput = document.getElementById("searchInput");
-  const searchBox = document.querySelector(".search-box");
-  const hero = document.querySelector(".hero");
+/* ================= NAV ================= */
+.site-header {
+  position: relative;
+  z-index: 20;
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
 
-  const imagesEl = document.getElementById("product-images");
+.site-nav {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
 
-  let products = [];
-  let currentProduct = null;
+.nav-logo img {
+  height: 36px;
+  width: auto;
+  display: block;
+}
 
-  let splideAll = null;
-  let splideDecor = null;
-  let splideRelated = null;
-  let isSearchFocused = false;
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 8px;
+}
 
-  const normalize = (str = "") =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+.nav-toggle-bar {
+  width: 24px;
+  height: 2px;
+  background: #e5e7eb;
+  border-radius: 999px;
+}
 
-  /* ================= FETCH ================= */
-  fetch(sheetUrl)
-    .then((res) => res.text())
-    .then((text) => {
-      const data = JSON.parse(text.substring(47).slice(0, -2));
-      const rows = data.table.rows.slice(1);
+.nav-menu {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
 
-      rows.forEach((row) => {
-        const [
-          id,
-          nome,
-          categoria,
-          subcategoria,
-          preco,
-          descricao,
-          imagens,
-        ] = row.c.map((cell) => cell?.v || "");
+.nav-menu a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
 
-        if (!id) return;
+.nav-menu a:hover {
+  opacity: 0.8;
+}
 
-        const product = {
-          id,
-          nome,
-          categoria: normalize(categoria),
-          subcategorias: subcategoria
-            .split(",")
-            .map((s) => normalize(s))
-            .filter(Boolean),
-          preco,
-          descricao,
-          imagens: imagens
-            .split(",")
-            .map((i) => i.trim())
-            .filter(Boolean),
-        };
-
-        products.push(product);
-
-        /* ===== PRODUTO ATUAL ===== */
-        if (productId && id == productId) {
-          currentProduct = product;
-
-          document.title = `${product.nome} • D&M Diversões`;
-
-          document.getElementById("product-name").textContent = product.nome;
-          document.getElementById("product-price").textContent = product.preco;
-          document.getElementById("product-description").innerHTML =
-            product.descricao.replace(/\n/g, "<br>");
-
-          product.imagens.forEach((url) => {
-            imagesEl.insertAdjacentHTML(
-              "beforeend",
-              `<li class="splide__slide">
-                <img src="${url}" alt="${product.nome}">
-              </li>`
-            );
-          });
-
-          const mensagemWhatsapp =
-            `Olá, tenho interesse em alugar o produto "${product.nome}"! ` +
-            `Poderia me dizer se está disponível e me passar mais informações?`;
-
-          document.getElementById("product-whatsapp").href =
-            `https://wa.me/5569992329825?text=${encodeURIComponent(
-              mensagemWhatsapp
-            )}`;
-        }
-      });
-
-      /* ===== HOME ===== */
-      if (allList) renderHome(products);
-
-      /* ===== SPLIDE PRODUTO ===== */
-      if (productId && imagesEl) {
-        new Splide("#splide-product", {
-          type: "loop",
-          autoplay: true,
-          interval: 3000,
-          gap: "1rem",
-          pagination: false,
-        }).mount();
-      }
-
-      /* ===== RECOMENDADOS ===== */
-      if (productId && currentProduct && relatedList) {
-        renderRelated();
-      }
-    });
-
-  /* ================= HOME ================= */
-  function renderHome(list, searching = false) {
-    if (!allList) return;
-
-    allList.innerHTML = "";
-    decorList && (decorList.innerHTML = "");
-
-    list.forEach((p) => {
-      const card = `
-        <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
-            <img src="${p.imagens[0]}" alt="${p.nome}">
-            <div class="product-card-content">
-              <h3>${p.nome}</h3>
-              <span>${p.preco}</span>
-            </div>
-          </a>
-        </li>
-      `;
-
-      if (!searching && p.categoria === "decoracoes" && decorList) {
-        decorList.insertAdjacentHTML("beforeend", card);
-      } else {
-        allList.insertAdjacentHTML("beforeend", card);
-      }
-    });
-
-    if (carouselDecor) {
-      carouselDecor.style.display = searching ? "none" : "block";
-    }
-
-    initHomeSplides();
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: flex;
   }
 
-  function initHomeSplides() {
-    splideAll && splideAll.destroy(true);
-    splideDecor && splideDecor.destroy(true);
-
-    splideAll = new Splide("#carousel-all", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
-  }
-      },
-    }).mount();
-
-
-    if (carouselDecor && carouselDecor.style.display !== "none") {
-      splideDecor = new Splide("#carousel-decor", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
-  
-  }
-      },
-      }).mount();
-    }
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 12px 20px 18px;
+    background: rgba(2, 6, 23, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
-  /* ================= RECOMENDADOS ================= */
-  function renderRelated() {
-    relatedList.innerHTML = "";
-
-    const relatedSource =
-      currentProduct.categoria === "decoracoes"
-        ? products.filter(
-            (p) =>
-              p.categoria === "decoracoes" &&
-              p.id !== currentProduct.id
-          )
-        : products.filter((p) => p.id !== currentProduct.id);
-
-    const currentSubcats = new Set(currentProduct.subcategorias);
-    const scoreRelated = (p) => {
-      let score = 0;
-      if (p.categoria === currentProduct.categoria) score += 3;
-      p.subcategorias.forEach((sub) => {
-        if (currentSubcats.has(sub)) score += 1;
-      });
-      return score;
-    };
-
-    const related = relatedSource
-      .map((p) => ({ p, score: scoreRelated(p) }))
-      .sort((a, b) => b.score - a.score)
-      .map(({ p }) => p);
-
-    related.forEach((p) => {
-      relatedList.insertAdjacentHTML(
-        "beforeend",
-        `
-        <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
-            <img src="${p.imagens[0]}" alt="${p.nome}">
-            <div class="product-card-content">
-              <h3>${p.nome}</h3>
-              <span>${p.preco}</span>
-            </div>
-          </a>
-        </li>
-        `
-      );
-    });
-
-    splideRelated && splideRelated.destroy(true);
-
-    splideRelated = new Splide("#carousel-related", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
+  .nav-menu.is-open {
+    display: flex;
   }
-      },
-    }).mount();
+}
+
+/* ================= HERO ================= */
+
+.hero {
+  height: 100svh;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+
+  @media (max-width: 768px){
+    height: auto;
+    padding: 50px 0;
+
   }
+}
 
-  /* ================= PESQUISA ================= */
-  const setHeroHidden = (hidden) => {
-    if (!hero) return;
-    hero.style.display = hidden ? "none" : "";
-  };
+/* GRADIENTE (ATRÁS DO CONTEÚDO) */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(2, 6, 23, 0.35),
+    rgba(2, 6, 23, 0.85)
+  );
+  z-index: 1;
+}
 
-  searchInput?.addEventListener("focus", () => {
-    isSearchFocused = true;
-    setHeroHidden(true);
-  });
+/* LAYOUT */
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  width: min(1200px, 100%);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
 
-  searchInput?.addEventListener("blur", () => {
-    isSearchFocused = false;
-    const term = normalize(searchInput.value);
-    if (!term) setHeroHidden(false);
-  });
+/* CONTEÚDO */
+.hero-content {
+  text-align: center;
+  max-width: 700px;
+  padding: 0;
 
-  searchInput?.addEventListener("input", () => {
-    const term = normalize(searchInput.value);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
 
-    if (!term) {
-      renderHome(products);
-      if (!isSearchFocused) setHeroHidden(false);
-      return;
-    }
+.hero-art {
+  width: min(420px, 90vw);
+}
 
-    const filtered = products.filter((p) => {
-      const text = normalize(
-        p.nome +
-          " " +
-          p.descricao +
-          " " +
-          p.categoria +
-          " " +
-          p.subcategorias.join(" ")
-      );
+.hero-explosion {
+  width: 100%;
+  height: auto;
+  display: block;
+}
 
-      return text.includes(term);
-    });
+/* LOGO */
+.hero-content .hero-logo {
+  width: 400px;
+  max-width: 80%;
+  height: auto;
+}
 
-    renderHome(filtered, true);
-    setHeroHidden(true);
-  });
+/* TÍTULO */
+.hero h1 {
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 700;
+  margin: 0;
+  font-family: 'Luckiest Guy', cursive;
+  letter-spacing: 0.5px;
+  text-shadow:
+    -2px -2px 0 #0b1222,
+    2px -2px 0 #0b1222,
+    -2px 2px 0 #0b1222,
+    2px 2px 0 #0b1222;
+}
 
-  const blurSearchOnOutsidePress = (event) => {
-    if (!searchInput || !searchBox) return;
-    if (document.activeElement !== searchInput) return;
-    if (searchBox.contains(event.target)) return;
-    searchInput.blur();
-  };
+/* TEXTO */
+.hero p {
+  font-size: 18px;
+  color: var(--muted);
+  margin: 0;
+}
 
-  document.addEventListener("pointerdown", blurSearchOnOutsidePress, {
-    passive: true,
-  });
-
-  /* ================= NAV ================= */
-  const navToggle = document.querySelector(".nav-toggle");
-  const navMenu = document.querySelector(".nav-menu");
-  if (navToggle && navMenu) {
-    navToggle.addEventListener("click", () => {
-      const isOpen = navMenu.classList.toggle("is-open");
-      navToggle.setAttribute("aria-expanded", String(isOpen));
-    });
-
-    navMenu.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
-        navMenu.classList.remove("is-open");
-        navToggle.setAttribute("aria-expanded", "false");
-      });
-    });
+/* MOBILE */
+@media (max-width: 768px) {
+  .hero {
+    min-height: auto;
   }
 
-  /* ================= FAQ ================= */
-  const faqButtons = document.querySelectorAll(".faq-question");
-  faqButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const answerId = btn.getAttribute("aria-controls");
-      const answer = answerId ? document.getElementById(answerId) : null;
-      const isOpen = btn.getAttribute("aria-expanded") === "true";
+  .hero-content .hero-logo {
+    width: 70%;
+  }
 
-      btn.setAttribute("aria-expanded", String(!isOpen));
-      const icon = btn.querySelector(".faq-icon");
-      if (icon) icon.textContent = isOpen ? "+" : "-";
-      if (answer) answer.hidden = isOpen;
-    });
-  });
-});
+  /* TÍTULO */
+.hero h1 {
+  font-size: 50px;
+  font-weight: 700;
+  margin: 0;
+}
 
+/* TEXTO */
+.hero p {
+  font-size: 30px;
+  color: var(--muted);
+  margin: 0;
+}
+}
+
+@media (min-width: 900px) {
+  .hero-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+  }
+
+  .hero-content {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .hero-art {
+    width: min(900px, 75%);
+    margin-right: -120px;
+    margin-left: -20px;
+  }
+
+  .hero-explosion {
+    transform: translateX(40px) scale(1.2);
+    transform-origin: center;
+  }
+}
+
+/* ================= HERO BUTTON ================= */
+
+.hero-button {
+  margin-top: 10px;
+  padding: 14px 28px;
+  background: #ffffff;
+  color: #020617;
+  border-radius: 999px;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.hero-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+
+
+/* ================= PESQUISA ================= */
+
+.search-container {
+  width: 100%;
+  padding: 30px 1rem;
+  background-color: #020617;
+  display: flex;
+  justify-content: center;
+  scroll-margin-top: 84px;
+}
+
+/* wrapper */
+.search-box {
+  position: relative;
+  width: 500px;
+  max-width: 100%;
+}
+
+/* ícone lupa */
+.search-box i {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* input */
+#searchInput {
+  width: 100%;
+  padding: 14px 16px 14px 44px; /* espaço pro ícone */
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 16px;
+  outline: none;
+}
+
+#searchInput:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+/* mobile */
+@media (max-width: 768px) {
+  .search-box {
+    width: 90%;
+  }
+}
+
+
+
+
+
+/* ================= SEÇÕES ================= */
+.section {
+  padding: 60px 20px;
+  max-width: 1200px;
+  margin: auto;
+  scroll-margin-top: 84px;
+}
+
+.section-title {
+  font-size: 26px;
+  margin-bottom: 24px;
+}
+
+.decor-notice {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.decor-notice span {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ================= FAQ ================= */
+.faq-section {
+  padding: 60px 20px;
+  max-width: 900px;
+  margin: auto;
+  scroll-margin-top: 84px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faq-item {
+  background: #0b1222;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.faq-question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.faq-icon {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.faq-answer {
+  padding: 0 20px 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ================= CARD PRODUTO ================= */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px; /* pode até reduzir mais se quiser */
+  overflow: hidden;
+  text-decoration: none;
+  color: #111;
+  margin: 0px;
+}
+
+/* REMOVIDO: hover, transform, box-shadow, transition */
+
+.product-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3; /* 1024x768 */
+  object-fit: cover;
+  display: block;
+}
+
+/* Evita repaints desnecessários */
+.product-card-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fff;
+}
+
+.product-card-content h3 {
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.product-card-content span {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+
+/* ================= BOTÃO ================= */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #022c22;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform .2s ease;
+}
+
+.button:hover {
+  transform: scale(1.05);
+}
+
+/* ================= PÁGINA PRODUTO ================= */
+.descricao {
+  white-space: pre-line;
+}
+
+
+.product {
+  max-width: 1100px;
+  margin: auto;
+  padding: 40px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.product-gallery img {
+  border-radius: var(--radius);
+}
+
+.product-title {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.product-price {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+.product-description {
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.product-button {
+  display: inline-block;
+  padding: 16px 24px;
+  background: var(--primary);
+  color: #022c22;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ================= FOOTER ================= */
+.footer {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ================= SPLIDE ================= */
+.splide__slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ================= RESPONSIVO ================= */
+@media (max-width: 900px) {
+  .product {
+    grid-template-columns: 1fr;
+  }
+
+  .hero {
+    min-height: 60vh;
+  }
+}
+
+
+/* ================= RECOMENDADOS (PÁGINA PRODUTO) ================= */
+
+.recomendados h2 {
+  padding-left: 25px;
+}
+
+#carousel-related {
+  margin-top: 60px;
+}
+
+/* NÃO força overflow visible no track (isso pesa no slider) */
+#carousel-related .splide__track {
+  overflow: hidden;
+}
+
+/* Slide simples, sem centralizações pesadas */
+#carousel-related .splide__slide {
+  max-width: 320px;
+}
+
+/* CARD */
+#carousel-related .product-card {
+  width: 100%;
+  max-width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0px;
+}
+
+/* REMOVIDO: hover, transform, box-shadow, transition */
+
+/* IMAGEM */
+#carousel-related .product-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+/* CONTEÚDO */
+#carousel-related .product-card-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#carousel-related .product-card-content h3 {
+  font-size: 15px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+#carousel-related .product-card-content span {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+/* ================= OUTROS CARROSSEIS ================= */
+
+/* Evita overflow visível desnecessário */
+#carousel-all .splide__track,
+#carousel-decor .splide__track {
+  overflow: hidden;
+}
+
+
+
+/*======================================= FOOTER ============================*/
+
+.site-footer {
+  width: 100%;
+  font-family: inherit;
+}
+
+/* ---------- PARTE SUPERIOR ---------- */
+.footer-top {
+  background-color: #020617; /* tom principal */
+  padding: 40px 1rem 30px;
+  text-align: center;
+}
+
+.footer-client-logo {
+  height: 60px;
+  width: auto;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.4));
+}
+
+/* ÍCONES */
+.footer-social {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.footer-social a {
+  color: #ffffff;
+  font-size: 22px;
+  transition: transform .2s ease, opacity .2s ease;
+}
+
+.footer-social a:hover {
+  transform: scale(1.15);
+  opacity: .8;
+}
+
+/* ---------- PARTE INFERIOR ---------- */
+.footer-bottom {
+  background-color: #00030a; /* mais escuro */
+  padding: 18px 1rem;
+  color: #94a3b8;
+  font-size: 13px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.footer-dev {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-dev img {
+  height: 24px;
+  width: auto;
+  transition: transform .2s ease;
+}
+
+.footer-dev a:hover img {
+  transform: scale(1.1);
+}
