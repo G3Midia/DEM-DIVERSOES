@@ -14,19 +14,19 @@
   --radius: 16px;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: linear-gradient(180deg, #020617, #0f172a);
   color: var(--text);
-  padding-top: 68px;
 }
 
 /* ================= NAV ================= */
 .site-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: static;
   z-index: 20;
   background: rgba(2, 6, 23, 0.75);
   backdrop-filter: blur(10px);
@@ -119,9 +119,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
 
   @media (max-width: 768px){
-    height: 100svh;
+    height: auto;
+    padding: 50px 0;
 
   }
 }
@@ -139,18 +141,38 @@ body {
   z-index: 1;
 }
 
-/* CONTEÚDO */
-.hero-content {
+/* LAYOUT */
+.hero-inner {
   position: relative;
   z-index: 2;
+  width: min(1200px, 100%);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* CONTEÚDO */
+.hero-content {
   text-align: center;
   max-width: 700px;
-  padding: 24px;
+  padding: 0;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
+}
+
+.hero-art {
+  width: min(420px, 90vw);
+}
+
+.hero-explosion {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* LOGO */
@@ -165,6 +187,13 @@ body {
   font-size: clamp(28px, 5vw, 44px);
   font-weight: 700;
   margin: 0;
+  font-family: 'Luckiest Guy', cursive;
+  letter-spacing: 0.5px;
+  text-shadow:
+    -2px -2px 0 #0b1222,
+    2px -2px 0 #0b1222,
+    -2px 2px 0 #0b1222,
+    2px 2px 0 #0b1222;
 }
 
 /* TEXTO */
@@ -177,7 +206,7 @@ body {
 /* MOBILE */
 @media (max-width: 768px) {
   .hero {
-    min-height: 60vh;
+    min-height: auto;
   }
 
   .hero-content .hero-logo {
@@ -197,6 +226,31 @@ body {
   color: var(--muted);
   margin: 0;
 }
+}
+
+@media (min-width: 900px) {
+  .hero-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 48px;
+  }
+
+  .hero-content {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .hero-art {
+    width: min(900px, 75%);
+    margin-right: -120px;
+    margin-left: -20px;
+  }
+
+  .hero-explosion {
+    transform: translateX(40px) scale(1.2);
+    transform-origin: center;
+  }
 }
 
 /* ================= HERO BUTTON ================= */
