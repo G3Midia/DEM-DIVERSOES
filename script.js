@@ -1,367 +1,224 @@
-document.addEventListener("DOMContentLoaded", () => {
-  if ("scrollRestoration" in history) {
-    history.scrollRestoration = "manual";
-  }
-  window.scrollTo(0, 0);
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  const params = new URLSearchParams(window.location.search);
-  const productId = params.get("id");
+  <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
+  <title>D&M Diversões</title>
 
-  const sheetUrl =
-    "https://docs.google.com/spreadsheets/d/13nL3fx9jp84DIKGr516nteMEFPCfLvtlrzlZlVzibdA/gviz/tq?tqx=out:json";
+  <!-- Splide CSS -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/css/splide.min.css"
+  />
 
-  /* ================= ELEMENTOS ================= */
-  const allList = document.querySelector("#carousel-all .splide__list");
-  const decorList = document.querySelector("#carousel-decor .splide__list");
-  const relatedList = document.querySelector("#carousel-related .splide__list");
+  <!-- CSS principal -->
+  <link rel="stylesheet" href="style.css" />
 
-  const carouselDecor = document.getElementById("carousel-decor");
-  const searchInput = document.getElementById("searchInput");
-  const searchBox = document.querySelector(".search-box");
-  const hero = document.querySelector(".hero");
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" />
 
-  const imagesEl = document.getElementById("product-images");
-
-  let products = [];
-  let currentProduct = null;
-
-  let splideAll = null;
-  let splideDecor = null;
-  let splideRelated = null;
-  let isSearchFocused = false;
-
-  const normalize = (str = "") =>
-    str
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
-
-  /* ================= FETCH ================= */
-  fetch(sheetUrl)
-    .then((res) => res.text())
-    .then((text) => {
-      const data = JSON.parse(text.substring(47).slice(0, -2));
-      const rows = data.table.rows.slice(1);
-
-      rows.forEach((row) => {
-        const [
-          id,
-          nome,
-          categoria,
-          subcategoria,
-          preco,
-          descricao,
-          imagens,
-        ] = row.c.map((cell) => cell?.v || "");
-
-        if (!id) return;
-
-        const product = {
-          id,
-          nome,
-          categoria: normalize(categoria),
-          subcategorias: subcategoria
-            .split(",")
-            .map((s) => normalize(s))
-            .filter(Boolean),
-          preco,
-          descricao,
-          imagens: imagens
-            .split(",")
-            .map((i) => i.trim())
-            .filter(Boolean),
-        };
-
-        products.push(product);
-
-        /* ===== PRODUTO ATUAL ===== */
-        if (productId && id == productId) {
-          currentProduct = product;
-
-          document.title = `${product.nome} • D&M Diversões`;
-
-          document.getElementById("product-name").textContent = product.nome;
-          document.getElementById("product-price").textContent = product.preco;
-          document.getElementById("product-description").innerHTML =
-            product.descricao.replace(/\n/g, "<br>");
-
-          product.imagens.forEach((url) => {
-            imagesEl.insertAdjacentHTML(
-              "beforeend",
-              `<li class="splide__slide">
-                <img src="${url}" alt="${product.nome}">
-              </li>`
-            );
-          });
-
-          const mensagemWhatsapp =
-            `Olá, tenho interesse em alugar o produto "${product.nome}"! ` +
-            `Poderia me dizer se está disponível e me passar mais informações?`;
-
-          document.getElementById("product-whatsapp").href =
-            `https://wa.me/5569992329825?text=${encodeURIComponent(
-              mensagemWhatsapp
-            )}`;
-        }
-      });
-
-      /* ===== HOME ===== */
-      if (allList) renderHome(products);
-
-      /* ===== SPLIDE PRODUTO ===== */
-      if (productId && imagesEl) {
-        new Splide("#splide-product", {
-          type: "loop",
-          autoplay: true,
-          interval: 3000,
-          gap: "1rem",
-          pagination: false,
-        }).mount();
-      }
-
-      /* ===== RECOMENDADOS ===== */
-      if (productId && currentProduct && relatedList) {
-        renderRelated();
-      }
-    });
-
-  /* ================= HOME ================= */
-  function renderHome(list, searching = false) {
-    if (!allList) return;
-
-    allList.innerHTML = "";
-    decorList && (decorList.innerHTML = "");
-
-    list.forEach((p) => {
-      const card = `
-        <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
-            <img src="${p.imagens[0]}" alt="${p.nome}">
-            <div class="product-card-content">
-              <h3>${p.nome}</h3>
-              <span>${p.preco}</span>
-            </div>
-          </a>
-        </li>
-      `;
-
-      if (!searching && p.categoria === "decoracoes" && decorList) {
-        decorList.insertAdjacentHTML("beforeend", card);
-      } else {
-        allList.insertAdjacentHTML("beforeend", card);
-      }
-    });
-
-    if (carouselDecor) {
-      carouselDecor.style.display = searching ? "none" : "block";
-    }
-
-    initHomeSplides();
-  }
-
-  function initHomeSplides() {
-    splideAll && splideAll.destroy(true);
-    splideDecor && splideDecor.destroy(true);
-
-    splideAll = new Splide("#carousel-all", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
-  }
-      },
-    }).mount();
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+/>
 
 
-    if (carouselDecor && carouselDecor.style.display !== "none") {
-      splideDecor = new Splide("#carousel-decor", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
-  
-  }
-      },
-      }).mount();
-    }
-  }
+<meta property="og:title" content="D&M Diversões">
+<meta property="og:description" content="Brinquedos, decorações e tudo o que você precisa pra uma festa inesquecível!">
+<meta property="og:image" content="https://res.cloudinary.com/djvploeu9/image/upload/v1767974198/Logo_as3zx0.png">
+<meta property="og:url" content="https://dem-diversoes.vercel.app/index.html">
+<meta property="og:type" content="website">
 
-  /* ================= RECOMENDADOS ================= */
-  function renderRelated() {
-    relatedList.innerHTML = "";
+</head>
 
-    const relatedSource =
-      currentProduct.categoria === "decoracoes"
-        ? products.filter(
-            (p) =>
-              p.categoria === "decoracoes" &&
-              p.id !== currentProduct.id
-          )
-        : products.filter((p) => p.id !== currentProduct.id);
+<body>
 
-    const currentSubcats = new Set(currentProduct.subcategorias);
-    const scoreRelated = (p) => {
-      let score = 0;
-      if (p.categoria === currentProduct.categoria) score += 3;
-      p.subcategorias.forEach((sub) => {
-        if (currentSubcats.has(sub)) score += 1;
-      });
-      return score;
-    };
+  <!-- ================= NAV ================= -->
+  <header class="site-header">
+    <nav class="site-nav">
+      <a class="nav-logo" href="index.html" aria-label="D&M Diversões">
+        <img
+          src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+          alt="Logo da empresa"
+        />
+      </a>
 
-    const related = relatedSource
-      .map((p) => ({ p, score: scoreRelated(p) }))
-      .sort((a, b) => b.score - a.score)
-      .map(({ p }) => p);
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
 
-    related.forEach((p) => {
-      relatedList.insertAdjacentHTML(
-        "beforeend",
-        `
-        <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
-            <img src="${p.imagens[0]}" alt="${p.nome}">
-            <div class="product-card-content">
-              <h3>${p.nome}</h3>
-              <span>${p.preco}</span>
-            </div>
-          </a>
-        </li>
-        `
-      );
-    });
+      <ul class="nav-menu" id="nav-menu">
+        <li><a href="#search">Itens disponíveis</a></li>
+        <li><a href="#decor">Decorações</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
+      </ul>
+    </nav>
+  </header>
 
-    splideRelated && splideRelated.destroy(true);
+  <!-- ================= HERO ================= -->
+  <header
+    class="hero"
+    style="background-image: url('https://res.cloudinary.com/djvploeu9/image/upload/v1767963355/HERO_btz991.jpg')"
+  >
+    <div class="hero-inner">
+      <div class="hero-content">
+        <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png" alt="Logo" class="hero-logo"/>
+        <h1>Aluguel de Artigos para Festas</h1>
+        <p>
+          Brinquedos, decorações e tudo o que você precisa para uma festa
+          inesquecível
+        </p>
+        <a href="#search" class="hero-button">Ver itens dispon¡veis</a>
+      </div>
 
-    splideRelated = new Splide("#carousel-related", {
-      type: "loop",
-      perPage: 3,
-      gap: "1rem",
-      pagination: false,
-      perMove: 1,
-      Speed: 1000,
-      easing: "linear",
-      lazyLoad: "nearby",
-      rewind: true,
-      breakpoints: {
-        900: { perPage: 2 },
-    600: {
-      perPage: 1,
-      padding: { left: "1.5rem", right: "1.5rem" },
-      gap: "0.8rem",
-  }
-      },
-    }).mount();
-  }
+      <div class="hero-art">
+        <img
+          src="https://res.cloudinary.com/djvploeu9/image/upload/v1769002209/Explos%C3%A3o_qo2lum.png"
+          alt="Explosao"
+          class="hero-explosion"
+        />
+      </div>
+    </div>
+  </header>
 
-  /* ================= PESQUISA ================= */
-  const setHeroHidden = (hidden) => {
-    if (!hero) return;
-    hero.style.display = hidden ? "none" : "";
-  };
+  <!-- ================= PESQUISA ================= -->
+<div class="search-container" id="search">
+  <div class="search-box">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input
+      type="search"
+      id="searchInput"
+      placeholder="Buscar por nome ou categoria..."
+    />
+  </div>
+</div>
 
-  searchInput?.addEventListener("focus", () => {
-    isSearchFocused = true;
-    setHeroHidden(true);
-  });
 
-  searchInput?.addEventListener("blur", () => {
-    isSearchFocused = false;
-    const term = normalize(searchInput.value);
-    if (!term) setHeroHidden(false);
-  });
 
-  searchInput?.addEventListener("input", () => {
-    const term = normalize(searchInput.value);
+  <!-- ================= CARROSSEL PRINCIPAL ================= -->
+  <section class="section" id="itens">
+    <h2 class="section-title">Itens disponíveis</h2>
 
-    if (!term) {
-      renderHome(products);
-      if (!isSearchFocused) setHeroHidden(false);
-      return;
-    }
+    <div id="carousel-all" class="splide">
+      <div class="splide__track">
+        <ul class="splide__list">
+          <!-- JS INJETA OS ITENS -->
+        </ul>
+      </div>
+    </div>
+  </section>
 
-    const filtered = products.filter((p) => {
-      const text = normalize(
-        p.nome +
-          " " +
-          p.descricao +
-          " " +
-          p.categoria +
-          " " +
-          p.subcategorias.join(" ")
-      );
+  <!-- ================= CARROSSEL DECORAÇÕES ================= -->
+  <section class="section" id="decor">
+    <h2 class="section-title">Decorações</h2>
 
-      return text.includes(term);
-    });
+    <div id="carousel-decor" class="splide">
+      <div class="splide__track">
+        <ul class="splide__list">
+          <!-- JS INJETA AS DECORAÇÕES -->
+        </ul>
+      </div>
+    </div>
 
-    renderHome(filtered, true);
-    setHeroHidden(true);
-  });
+    <div class="decor-notice">
+      <span>Não encontrou o que procura? Experimente fazer uma pesquisa.</span>
+      <a href="#search" class="button">Fazer uma pesquisa</a>
+    </div>
+  </section>
 
-  const blurSearchOnOutsidePress = (event) => {
-    if (!searchInput || !searchBox) return;
-    if (document.activeElement !== searchInput) return;
-    if (searchBox.contains(event.target)) return;
-    searchInput.blur();
-  };
+  <!-- ================= FAQ ================= -->
+  <section class="faq-section" id="faq">
+    <h2 class="section-title">FAQ</h2>
 
-  document.addEventListener("pointerdown", blurSearchOnOutsidePress, {
-    passive: true,
-  });
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-a1">
+          <span>Qual o prazo para reservar?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" id="faq-a1" hidden>
+          O prazo depende da disponibilidade, mas recomendamos reservar com antecedencia.
+        </div>
+      </div>
 
-  /* ================= NAV ================= */
-  const navToggle = document.querySelector(".nav-toggle");
-  const navMenu = document.querySelector(".nav-menu");
-  if (navToggle && navMenu) {
-    navToggle.addEventListener("click", () => {
-      const isOpen = navMenu.classList.toggle("is-open");
-      navToggle.setAttribute("aria-expanded", String(isOpen));
-    });
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-a2">
+          <span>Como funciona a entrega e retirada?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" id="faq-a2" hidden>
+          Fazemos a entrega e retirada no local combinado. Consulte taxas e horarios.
+        </div>
+      </div>
 
-    navMenu.querySelectorAll("a").forEach((link) => {
-      link.addEventListener("click", () => {
-        navMenu.classList.remove("is-open");
-        navToggle.setAttribute("aria-expanded", "false");
-      });
-    });
-  }
+      <div class="faq-item">
+        <button class="faq-question" type="button" aria-expanded="false" aria-controls="faq-a3">
+          <span>Tem desconto para pacotes?</span>
+          <span class="faq-icon">+</span>
+        </button>
+        <div class="faq-answer" id="faq-a3" hidden>
+          Sim, montamos pacotes personalizados. Fale com a gente para uma proposta personalizada.
+        </div>
+      </div>
+    </div>
+  </section>
 
-  /* ================= FAQ ================= */
-  const faqButtons = document.querySelectorAll(".faq-question");
-  faqButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const answerId = btn.getAttribute("aria-controls");
-      const answer = answerId ? document.getElementById(answerId) : null;
-      const isOpen = btn.getAttribute("aria-expanded") === "true";
 
-      btn.setAttribute("aria-expanded", String(!isOpen));
-      const icon = btn.querySelector(".faq-icon");
-      if (icon) icon.textContent = isOpen ? "+" : "-";
-      if (answer) answer.hidden = isOpen;
-    });
-  });
-});
+    <!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <!-- PARTE SUPERIOR -->
+  <div class="footer-top">
+    <img
+      src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+      alt="Logo da empresa"
+      class="footer-client-logo"
+    />
+
+    <div class="footer-social">
+      <a href="https://wa.me/5569992329825" target="_blank" aria-label="WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+      </a>
+
+      <a href="https://www.facebook.com/profile.php?id=100070061812267#" target="_blank" aria-label="Facebook">
+        <i class="fab fa-facebook-f"></i>
+      </a>
+
+      <a href="https://instagram.com/dem_diversoes" target="_blank" aria-label="Instagram">
+        <i class="fab fa-instagram"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- PARTE INFERIOR -->
+  <div class="footer-bottom">
+    <span>
+      © <span id="year"></span> Todos os direitos reservados
+    </span>
+
+    <span class="footer-dev">
+      Site desenvolvido por
+      <a href="https://wa.me/5569993053507" target="_blank">
+        <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767966176/Horizontal_Red_ai5o98.svg" alt="Sua marca">
+      </a>
+    </span>
+  </div>
+</footer>
+
+
+  <!-- ================= SCRIPTS ================= -->
+
+  <!-- Splide JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide/dist/js/splide.min.js"></script>
+
+
+  <!-- JS principal -->
+  <script src="script.js"></script>
+
+</body>
+</html>
 
