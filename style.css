@@ -262,6 +262,10 @@ body {
     text-align: left;
   }
 
+  .hero-actions {
+    justify-content: flex-start;
+  }
+
   .hero-art {
     width: min(900px, 75%);
     margin-right: -120px;
@@ -275,6 +279,21 @@ body {
 }
 
 /* ================= HERO BUTTON ================= */
+
+.hero-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 12px;
+  justify-content: center;
+  width: 100%;
+}
+
+.hero-content .hero-button {
+  margin-top: 0;
+  flex: 1 1 auto;
+  text-align: center;
+  white-space: nowrap;
+}
 
 .hero-button {
   margin-top: 10px;
