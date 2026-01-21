@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+  if ("scrollRestoration" in history) {
+    history.scrollRestoration = "manual";
+  }
+  window.scrollTo(0, 0);
+
   const params = new URLSearchParams(window.location.search);
   const productId = params.get("id");
 
