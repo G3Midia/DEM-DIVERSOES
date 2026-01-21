@@ -24,6 +24,27 @@ body {
   color: var(--text);
 }
 
+/* ================= ANIMAÇÕES ================= */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* ================= NAV ================= */
 .site-header {
   position: relative;
