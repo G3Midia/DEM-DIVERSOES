@@ -30,6 +30,70 @@ document.addEventListener("DOMContentLoaded", () => {
   let splideRelated = null;
   let isSearchFocused = false;
 
+  const revealObserver =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              entry.target.classList.add("is-visible");
+              revealObserver.unobserve(entry.target);
+            });
+          },
+          { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+        )
+      : null;
+
+  const addRevealClass = (root = document) => {
+    root
+      .querySelectorAll(
+        ".hero-content > *, .hero-art, .search-container, .section-title, .splide, .decor-notice, .faq-section"
+      )
+      .forEach((el) => {
+        if (!el.classList.contains("reveal")) el.classList.add("reveal");
+      });
+
+    const groups = new Map();
+    root.querySelectorAll(".reveal").forEach((el) => {
+      const group =
+        el.closest(".hero-inner, .section, .faq-section, .search-container") ||
+        document.body;
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push(el);
+    });
+
+    groups.forEach((items) => {
+      items.forEach((el, index) => {
+        el.style.transitionDelay = `${index * 80}ms`;
+      });
+    });
+  };
+
+  const observeReveals = (root = document) => {
+    if (!revealObserver) {
+      root.querySelectorAll(".reveal").forEach((el) => {
+        el.classList.add("is-visible");
+      });
+      return;
+    }
+    root
+      .querySelectorAll(".reveal:not(.is-visible)")
+      .forEach((el) => revealObserver.observe(el));
+  };
+
+  const initReveals = (root = document) => {
+    addRevealClass(root);
+    observeReveals(root);
+  };
+
+  const revealHeroOnLoad = () => {
+    const heroTargets = document.querySelectorAll(".hero-content, .hero-art");
+    if (!heroTargets.length) return;
+    requestAnimationFrame(() => {
+      heroTargets.forEach((el) => el.classList.add("is-visible"));
+    });
+  };
+
   const normalize = (str = "") =>
     str
       .toLowerCase()
@@ -126,6 +190,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  initReveals();
+  revealHeroOnLoad();
+
   /* ================= HOME ================= */
   function renderHome(list, searching = false) {
     if (!allList) return;
@@ -156,6 +223,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (carouselDecor) {
       carouselDecor.style.display = searching ? "none" : "block";
     }
+
+    initReveals(allList);
+    decorList && initReveals(decorList);
 
     initHomeSplides();
   }
@@ -275,6 +345,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
       },
     }).mount();
+
+    initReveals(relatedList);
   }
 
   /* ================= PESQUISA ================= */
