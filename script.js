@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
           autoplay: true,
           interval: 3000,
           gap: "1rem",
-          pagination: false,
+          pagination: true,
         }).mount();
       }
 
