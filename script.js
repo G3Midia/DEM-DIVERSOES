@@ -227,7 +227,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           const mensagemWhatsapp =
-            `Olá, tenho interesse em alugar o produto "${product.nome}"! ` +
+            `Olá, tenho interesse no produto "${product.nome}"! ` +
             `Poderia me dizer se está disponível e me passar mais informações?`;
 
           document.getElementById("product-whatsapp").href =
@@ -551,4 +551,5 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
+
 
