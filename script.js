@@ -101,6 +101,73 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/[\u0300-\u036f]/g, "")
       .trim();
 
+  const compactParams = (params) => {
+    const clean = {};
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === "string" && value.trim() === "") return;
+      if (Array.isArray(value) && value.length === 0) return;
+      clean[key] = value;
+    });
+    return clean;
+  };
+
+  const trackEvent = (name, params = {}) => {
+    if (typeof window.fbq !== "function") return;
+    window.fbq("track", name, compactParams(params));
+  };
+
+  const parsePriceValue = (priceText) => {
+    if (!priceText) return null;
+    const raw = String(priceText).match(/[\d.,]+/g);
+    if (!raw) return null;
+    const normalized = raw.join("").replace(/\./g, "").replace(",", ".");
+    const value = Number.parseFloat(normalized);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const getPendingViewId = () =>
+    sessionStorage.getItem("pending_viewcontent_id");
+  const setPendingViewId = (id) =>
+    sessionStorage.setItem("pending_viewcontent_id", String(id));
+  const clearPendingViewId = () =>
+    sessionStorage.removeItem("pending_viewcontent_id");
+
+  const trackViewContent = (product, fromClick = false) => {
+    if (!product) return;
+    const value = parsePriceValue(product.preco);
+    trackEvent("ViewContent", {
+      content_name: product.nome,
+      content_ids: [String(product.id)],
+      content_type: "product",
+      content_category: product.categoria,
+      value: value ?? undefined,
+      currency: value ? "BRL" : undefined,
+    });
+    if (fromClick) setPendingViewId(product.id);
+  };
+
+  const trackSearch = (term) => {
+    if (!term) return;
+    trackEvent("Search", { search_string: term });
+  };
+
+  const trackContact = (channel, product) => {
+    trackEvent("Contact", {
+      contact_channel: channel,
+      content_name: product?.nome,
+      content_ids: product ? [String(product.id)] : undefined,
+    });
+  };
+
+  const debounce = (fn, delay) => {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  };
+
   /* ================= FETCH ================= */
   fetch(sheetUrl)
     .then((res) => res.text())
@@ -184,6 +251,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }).mount();
       }
 
+      if (productId && currentProduct) {
+        const pendingId = getPendingViewId();
+        if (pendingId && String(currentProduct.id) === String(pendingId)) {
+          clearPendingViewId();
+        } else {
+          trackViewContent(currentProduct);
+        }
+      }
+
       /* ===== RECOMENDADOS ===== */
       if (productId && currentProduct && relatedList) {
         renderRelated();
@@ -203,7 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
     list.forEach((p) => {
       const card = `
         <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
+          <a href="produto.html?id=${p.id}" class="product-card" data-product-id="${p.id}">
             <img src="${p.imagens[0]}" alt="${p.nome}">
             <div class="product-card-content">
               <h3>${p.nome}</h3>
@@ -312,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "beforeend",
         `
         <li class="splide__slide">
-          <a href="produto.html?id=${p.id}" class="product-card">
+          <a href="produto.html?id=${p.id}" class="product-card" data-product-id="${p.id}">
             <img src="${p.imagens[0]}" alt="${p.nome}">
             <div class="product-card-content">
               <h3>${p.nome}</h3>
@@ -393,6 +469,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setHeroHidden(true);
   });
 
+  const sendSearch = debounce(() => {
+    const term = normalize(searchInput?.value || "");
+    if (term.length >= 2) trackSearch(term);
+  }, 700);
+
+  searchInput?.addEventListener("input", sendSearch);
+
   const blurSearchOnOutsidePress = (event) => {
     if (!searchInput || !searchBox) return;
     if (document.activeElement !== searchInput) return;
@@ -402,6 +485,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener("pointerdown", blurSearchOnOutsidePress, {
     passive: true,
+  });
+
+  document.addEventListener("click", (event) => {
+    const productLink = event.target.closest("a.product-card");
+    if (productLink) {
+      const productIdFromLink = productLink.getAttribute("data-product-id");
+      const product = products.find(
+        (p) => String(p.id) === String(productIdFromLink)
+      );
+      trackViewContent(product, true);
+      return;
+    }
+
+    const contactLink = event.target.closest("a[href]");
+    if (!contactLink) return;
+    const href = contactLink.getAttribute("href") || "";
+    const channel =
+      href.includes("wa.me")
+        ? "whatsapp"
+        : href.includes("instagram.com")
+        ? "instagram"
+        : href.includes("facebook.com")
+        ? "facebook"
+        : href.startsWith("mailto:")
+        ? "email"
+        : href.startsWith("tel:")
+        ? "phone"
+        : null;
+
+    if (channel) {
+      trackContact(channel, currentProduct);
+    }
   });
 
   /* ================= NAV ================= */
