@@ -219,6 +219,29 @@ form#login-form {
     text-align: left;
 }
 
+.password-field {
+    position: relative;
+}
+
+/* Adiciona espaço à direita no input de senha para o botão não sobrepor o texto */
+#login-form #password {
+    padding-right: 45px;
+}
+
+.password-toggle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    height: 40px; /* Altura aproximada do input */
+    width: 45px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--muted);
+    display: grid;
+    place-items: center;
+}
+
 .form-actions {
     display: flex;
     gap: 12px;
@@ -386,6 +409,11 @@ main#products {
 
 .btn-edit.is-active {
   background: var(--primary-dark);
+}
+
+.card.card-list.is-editing .card-list-container,
+.card.card-list.is-editing .btn-edit {
+    display: none;
 }
 
 .card-edit-panel {
