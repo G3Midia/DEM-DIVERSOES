@@ -79,6 +79,20 @@
           </ul>
         </div>
       </div>
+
+      <div id="splide-thumbs" class="splide splide-thumbs">
+        <div class="splide__track">
+          <ul class="splide__list" id="product-thumbs">
+            <!-- JS INJETA AS THUMBS -->
+          </ul>
+        </div>
+      </div>
+
+      <button type="button" id="view-image-btn" class="button" style="margin-top: 16px; width: 100%;">
+        <i class="fa-solid fa-magnifying-glass-plus"></i>
+        Ver Imagem
+      </button>
+
     </section>
 
     <!-- ===== INFORMAÇÕES ===== -->
@@ -168,6 +182,20 @@
   <!-- JS principal -->
   <script src="script.js"></script>
 
+  <div id="image-lightbox" class="image-lightbox" aria-hidden="true">
+    <button class="lightbox-close" type="button" aria-label="Fechar imagem">
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
+    <button class="lightbox-nav lightbox-prev" type="button" aria-label="Imagem anterior">
+      <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+    </button>
+    <figure class="lightbox-figure">
+      <img class="lightbox-image" src="" alt="" />
+    </figure>
+    <button class="lightbox-nav lightbox-next" type="button" aria-label="Próxima imagem">
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+    </button>
+  </div>
+
 </body>
 </html>
-
