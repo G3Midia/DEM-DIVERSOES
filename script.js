@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const productId = params.get("id");
   
     const sheetUrl =
-      "https://docs.google.com/spreadsheets/d/13nL3fx9jp84DIKGr516nteMEFPCfLvtlrzlZlVzibdA/gviz/tq?gid=0&tqx=out:json";
+      "https://script.google.com/macros/s/AKfycbxgMNP1sis1Ew1gRs9W76jHD43pDlY2sFHy0hwhzelHbbX1q2fswYOM5y7MHIeWlnip/exec";
   
     /* ================= ELEMENTOS ================= */
     const allList = document.querySelector("#carousel-all .splide__list");
@@ -233,35 +233,35 @@ document.addEventListener("DOMContentLoaded", () => {
   
     /* ================= FETCH ================= */
     fetch(sheetUrl)
-      .then((res) => res.text())
-      .then((text) => {
-        const data = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = data.table.rows.slice(1);
+      .then((res) => res.json())
+      .then((data) => {
+        // Suporta retorno como array direto ou objeto com propriedade 'data'
+        const rows = Array.isArray(data) ? data : (data.data || []);
   
         rows.forEach((row) => {
-          const [
-            id,
-            nome,
-            categoria,
-            subcategoria,
-            preco,
-            descricao,
-            imagens,
-          ] = row.c.map((cell) => cell?.v || "");
-  
+          // Mapeia propriedades do JSON (suporta minúsculo ou maiúsculo)
+          const id = row.id || row.Id || row.ID;
           if (!id) return;
+
+          const nome = row.nome || row.Nome || "";
+          const categoria = row.categoria || row.Categoria || "";
+          const subcategoria = row.subcategoria || row.Subcategoria || "";
+          const preco = row.preco || row.Preco || row.Preço || "";
+          const descricao = row.descricao || row.Descricao || row.Descrição || "";
+          const imagens = row.imagens || row.Imagens || "";
+  
   
           const product = {
-            id,
-            nome,
+            id: String(id),
+            nome: String(nome),
             categoria: normalize(categoria),
-            subcategorias: subcategoria
+            subcategorias: String(subcategoria)
               .split(",")
               .map((s) => normalize(s))
               .filter(Boolean),
-            preco,
-            descricao,
-            imagens: imagens
+            preco: String(preco),
+            descricao: String(descricao),
+            imagens: String(imagens)
               .split(",")
               .map((i) => i.trim())
               .filter(Boolean),
