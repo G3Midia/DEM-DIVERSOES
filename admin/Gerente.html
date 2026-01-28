@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gerente do Catalogo</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  </head>
+  <body>
+    <nav class="admin-nav">
+      <div class="admin-nav-inner">
+        <span class="admin-nav-title">Painel Admin</span>
+        <div class="admin-nav-links">
+          <a class="is-active" href="Gerente.html">Gerenciar itens</a>
+          <a href="Admin.html">Adicionar item</a>
+          <a href="#" id="logout-button">Sair</a>
+        </div>
+      </div>
+    </nav>
+    <header class="gerente-header">
+      <div class="topbar">
+        <h1 class="title">Gerente do Catalogo</h1>
+      </div>
+      <div class="toolbar">
+        <input
+          class="search"
+          id="search"
+          type="search"
+          placeholder="Buscar por nome, ID ou categoria..."
+        />
+        <span class="status-text" id="global-status">Carregando itens...</span>
+      </div>
+    </header>
+
+    <main id="products"></main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <script src="script.js"></script>
+  </body>
+</html>
