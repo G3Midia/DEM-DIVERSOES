@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allProducts = [];
   let allSubcategories = [];
 
-  const currentPage = window.location.pathname.split('/').pop();
+  const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
 
   // Protege as páginas de admin e redireciona conforme o status do usuário
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPage === 'index.html') {
             loadManagerData(user);
         }
-        if (currentPage === 'Admin.html') {
+        if (currentPage === 'admin.html') {
             loadAdminFormData(user);
         }
       }
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Lógica da página Adicionar Item (Admin.html) ---
-  if (currentPage === 'Admin.html') {
+  if (currentPage === 'admin.html') {
     const form = document.getElementById('product-form');
     form?.addEventListener('submit', handleSaveProduct);
   }
@@ -264,10 +264,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    user.getIdToken().then(token => {
-      fetch(API_URL, {
+    user.getIdToken()
+      .then(token => {
+        return fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'getManagerData', token: token })
+        });
       })
       .then(res => res.json())
       .then(response => {
@@ -275,16 +277,22 @@ document.addEventListener('DOMContentLoaded', () => {
           allSubcategories = response.data.subcategories || [];
           populateSubcategories(allSubcategories);
         }
-      });
-    });
+      })
+      .catch(err => console.error("Erro ao carregar categorias:", err));
   }
 
   function populateSubcategories(subcategories, selected = []) {
-    const select = document.getElementById('subcategorias');
-    if (!select) return;
-    select.innerHTML = subcategories.map(sub => {
-      const isSelected = selected.includes(sub);
-      return `<option value="${sub}" ${isSelected ? 'selected' : ''}>${sub}</option>`;
+    const container = document.getElementById('subcategorias-container');
+    if (!container) return;
+    
+    container.innerHTML = subcategories.map(sub => {
+      const isChecked = selected.includes(sub) ? 'checked' : '';
+      return `
+        <label class="chip-item">
+          <input type="checkbox" name="subcategoria" value="${sub}" ${isChecked}>
+          <span>${sub}</span>
+        </label>
+      `;
     }).join('');
   }
 
@@ -319,7 +327,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const payload = {
         nome: nome,
         categoria: form.querySelector('#categoria').value,
-        subcategorias: Array.from(form.querySelector('#subcategorias').selectedOptions).map(opt => opt.value),
+        // Pega todos os checkboxes marcados e junta em uma string separada por vírgula
+        // Isso CORRIGE o erro do .trim() no backend
+        subcategorias: Array.from(form.querySelectorAll('input[name="subcategoria"]:checked')).map(cb => cb.value).join(', '),
         preco: form.querySelector('#preco').value,
         descricao: form.querySelector('#descricao').value,
         imagens: imageUrls,
@@ -393,10 +403,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       globalStatusEl.textContent = 'Carregando itens da planilha...';
 
-      user.getIdToken().then(token => {
-          fetch(API_URL, {
+      user.getIdToken()
+          .then(token => {
+              return fetch(API_URL, {
               method: 'POST',
               body: JSON.stringify({ action: 'getManagerData', token: token })
+              });
           })
           .then(res => res.json())
           .then(response => {
@@ -410,13 +422,12 @@ document.addEventListener('DOMContentLoaded', () => {
               }
           })
           .catch(err => {
-              console.error(err);
-              globalStatusEl.textContent = 'Erro de conexão com o Google Sheets.';
+              console.error("Erro detalhado:", err);
+              globalStatusEl.textContent = 'Erro de conexão ou autenticação. Verifique o console.';
           });
-      });
   }
 
-  function renderProducts(products) {
+  function renderAllProducts(products) {
       const container = document.getElementById('products');
       if (!products || products.length === 0) {
           container.innerHTML = '<p style="text-align:center; color: var(--muted);">Nenhum item encontrado na planilha.</p>';
@@ -444,5 +455,220 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `;
       }).join('');
+  }
+
+  function renderProductCard(productId) {
+    const product = allProducts.find(p => String(p.id) === String(productId));
+    if (!product) return;
+
+    const card = document.querySelector(`.card-list[data-id="${productId}"]`);
+    if (!card) return;
+
+    const editPanel = card.querySelector('.card-edit-panel');
+    if (editPanel) editPanel.remove();
+
+    const img = product.imagens && product.imagens[0] ? product.imagens[0] : '';
+    
+    card.innerHTML = `
+      <div class="card-list-container">
+        <div class="card-image">
+          ${img ? `<img src="${img}" alt="${product.nome}">` : '<div class="no-image">Sem img</div>'}
+        </div>
+        <div class="card-info">
+          <h3 class="card-title">${product.nome}</h3>
+          <p class="card-id">ID: ${product.id} | ${product.categoria}</p>
+          <p class="card-description">${product.descricao}</p>
+          <strong class="card-price">${product.preco}</strong>
+        </div>
+      </div>
+      <button class="btn btn-edit">
+        <i class="fa-solid fa-pencil"></i> Editar
+      </button>
+    `;
+  }
+
+  function renderEditPanel(product) {
+    const card = document.querySelector(`.card-list[data-id="${product.id}"]`);
+    if (!card) return;
+
+    const subs = Array.isArray(product.subcategorias) ? product.subcategorias : String(product.subcategorias || '').split(',').map(s => s.trim());
+
+    const subChips = allSubcategories.map(sub => {
+      const isChecked = subs.includes(sub) ? 'checked' : '';
+      return `<label class="chip-item">
+                <input type="checkbox" class="edit-sub-check" value="${sub}" ${isChecked}>
+                <span>${sub}</span>
+              </label>`;
+    }).join('');
+
+    const imagesHtml = (product.imagens || []).map((img, idx) => `
+      <div class="image-item">
+        <img src="${img}" alt="Imagem ${idx + 1}">
+        <div class="image-actions">
+          <button type="button" class="btn-img-left" title="Mover para esquerda"><i class="fa-solid fa-arrow-left"></i></button>
+          <button type="button" class="btn-img-delete danger" title="Remover"><i class="fa-solid fa-trash"></i></button>
+          <button type="button" class="btn-img-right" title="Mover para direita"><i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </div>
+    `).join('');
+
+    const panelHtml = `
+      <div class="card-edit-panel">
+        <div class="field-grid">
+          <div>
+            <label>Nome</label>
+            <input type="text" class="edit-nome" value="${product.nome}">
+          </div>
+          <div>
+            <label>Preço</label>
+            <input type="text" class="edit-preco" value="${product.preco}">
+          </div>
+        </div>
+
+        <div class="field-grid">
+          <div>
+            <label>Categoria</label>
+            <select class="edit-categoria">
+              <option value="Brinquedos" ${product.categoria === 'Brinquedos' ? 'selected' : ''}>Brinquedos</option>
+              <option value="Jogos de Mesa" ${product.categoria === 'Jogos de Mesa' ? 'selected' : ''}>Jogos de Mesa</option>
+              <option value="Geleira" ${product.categoria === 'Geleira' ? 'selected' : ''}>Geleira</option>
+              <option value="Decorações" ${product.categoria === 'Decorações' ? 'selected' : ''}>Decorações</option>
+            </select>
+          </div>
+          <div>
+            <label>Subcategorias</label>
+            <div class="chip-container">${subChips}</div>
+          </div>
+        </div>
+
+        <div>
+          <label>Descrição</label>
+          <textarea class="edit-descricao">${product.descricao}</textarea>
+        </div>
+
+        <div>
+          <label>Imagens Atuais (Arraste ou use setas)</label>
+          <div class="image-list">
+            ${imagesHtml}
+          </div>
+        </div>
+
+        <div>
+          <label>Adicionar Novas Imagens</label>
+          <input type="file" class="edit-new-images" multiple accept="image/*">
+          <input type="text" class="edit-folder-cloudinary" placeholder="Pasta Cloudinary (opcional)">
+        </div>
+
+        <div class="card-footer">
+          <div class="card-status"></div>
+          <div>
+            <button class="btn btn-ghost btn-cancel-edit" data-id="${product.id}">Cancelar</button>
+            <button class="btn btn-primary btn-save-changes" data-id="${product.id}">Salvar Alterações</button>
+          </div>
+          <button class="btn danger btn-delete-product" data-id="${product.id}" style="margin-right: auto;">Excluir Item</button>
+        </div>
+      </div>
+    `;
+
+    card.insertAdjacentHTML('beforeend', panelHtml);
+  }
+
+  async function handleUpdateProduct(productId) {
+    const card = document.querySelector(`.card-list[data-id="${productId}"]`);
+    if (!card) return;
+
+    const statusEl = card.querySelector('.card-status');
+    const saveBtn = card.querySelector('.btn-save-changes');
+    
+    const nome = card.querySelector('.edit-nome').value.trim();
+    const preco = card.querySelector('.edit-preco').value.trim();
+    const categoria = card.querySelector('.edit-categoria').value;
+    const descricao = card.querySelector('.edit-descricao').value.trim();
+    
+    // Nova lógica para pegar os chips na edição também
+    const subcategorias = Array.from(card.querySelectorAll('.edit-sub-check:checked')).map(cb => cb.value).join(', ');
+
+    const existingImages = Array.from(card.querySelectorAll('.image-item img')).map(img => img.src);
+    const newFilesInput = card.querySelector('.edit-new-images');
+    const newFiles = newFilesInput.files;
+    const folderName = card.querySelector('.edit-folder-cloudinary').value.trim() || nome;
+
+    statusEl.textContent = 'Salvando...';
+    saveBtn.disabled = true;
+
+    try {
+      let newImageUrls = [];
+      if (newFiles.length > 0) {
+        statusEl.textContent = 'Enviando novas imagens...';
+        newImageUrls = await uploadImages(newFiles, folderName);
+      }
+
+      const finalImages = [...existingImages, ...newImageUrls];
+
+      const payload = {
+        id: productId,
+        nome,
+        categoria,
+        subcategorias,
+        preco,
+        descricao,
+        imagens: finalImages
+      };
+
+      statusEl.textContent = 'Atualizando planilha...';
+      
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'updateProduct', payload, token })
+      });
+      const result = await response.json();
+
+      if (result.status !== 'success') throw new Error(result.message);
+
+      const productIndex = allProducts.findIndex(p => String(p.id) === String(productId));
+      if (productIndex !== -1) {
+        allProducts[productIndex] = { ...allProducts[productIndex], ...payload };
+      }
+
+      toggleEditMode(productId);
+      
+    } catch (error) {
+      console.error(error);
+      statusEl.textContent = 'Erro: ' + error.message;
+      statusEl.style.color = '#ef4444';
+      saveBtn.disabled = false;
+    }
+  }
+
+  async function handleDeleteProduct(productId) {
+    if (!confirm('Tem certeza que deseja excluir este item?')) return;
+
+    const card = document.querySelector(`.card-list[data-id="${productId}"]`);
+    const statusEl = card.querySelector('.card-status');
+    if (statusEl) statusEl.textContent = 'Excluindo...';
+
+    try {
+      const user = auth.currentUser;
+      const token = await user.getIdToken();
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'deleteProduct', payload: { id: productId }, token })
+      });
+      const result = await response.json();
+
+      if (result.status !== 'success') throw new Error(result.message);
+
+      allProducts = allProducts.filter(p => String(p.id) !== String(productId));
+      card.remove();
+      document.getElementById('global-status').textContent = `${allProducts.length} itens carregados.`;
+
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao excluir: ' + error.message);
+    }
   }
 });

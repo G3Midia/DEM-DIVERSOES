@@ -372,6 +372,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (productId && currentProduct && relatedList) {
           renderRelated();
         }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar produtos do Google Sheets:", err);
       });
   
     initReveals();

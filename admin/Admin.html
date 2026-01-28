@@ -2,8 +2,12 @@
 <html lang="pt-br">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Catalogo</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
   </head>
   <body>
     <nav class="admin-nav">
@@ -32,8 +36,8 @@
       </select>
 
       <label for="subcategorias">Subcategorias</label>
-      <select id="subcategorias" multiple required></select>
-      <div class="hint">Pode selecionar varias.</div>
+      <div id="subcategorias-container" class="chip-container"></div>
+      <div class="hint">Toque para selecionar uma ou mais opções.</div>
 
       <label for="pasta-cloudinary">Pasta no Cloudinary</label>
       <input id="pasta-cloudinary" type="text" placeholder="Ex: Nome do item" />

@@ -435,19 +435,48 @@ main#products {
   }
 }
 
-select[multiple] {
-  min-height: 150px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+/* =========================================
+   CHIPS DE SELEÇÃO (SUBCATEGORIAS)
+   ========================================= */
+.chip-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
 }
 
-select[multiple] option {
-  padding: 8px 10px;
+.chip-item {
+  position: relative;
 }
 
-select[multiple] option:checked {
+.chip-item input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.chip-item span {
+  display: inline-block;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  color: var(--muted);
+}
+
+.chip-item input:checked + span {
   background: var(--primary);
-  color: #02130c;
+  color: #022c22;
+  border-color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
 }
 
 textarea {
