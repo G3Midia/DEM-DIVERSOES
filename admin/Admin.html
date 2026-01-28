@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin Catalogo</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <nav class="admin-nav">
+      <div class="admin-nav-inner">
+        <span class="admin-nav-title">Painel Admin</span>
+        <div class="admin-nav-links">
+          <a href="Gerente.html">Gerenciar itens</a>
+          <a class="is-active" href="Admin.html">Adicionar item</a>
+          <a href="#" id="logout-button">Sair</a>
+        </div>
+      </div>
+    </nav>
+    <h1 class="title" style="text-align: center;">Novo item do catalogo</h1>
+
+    <form id="product-form">
+      <label>Nome</label>
+      <input id="nome" type="text" required />
+
+      <label>Categoria</label>
+      <select id="categoria" required>
+        <option value="">Selecione</option>
+        <option value="Brinquedos">Brinquedos</option>
+        <option value="Jogos de Mesa">Jogos de Mesa</option>
+        <option value="Geleira">Geleira</option>
+        <option value="Decorações">Decorações</option>
+      </select>
+
+      <label>Subcategorias</label>
+      <select id="subcategorias" multiple required></select>
+      <div class="hint">Pode selecionar varias.</div>
+
+      <label>Pasta no Cloudinary</label>
+      <input id="pasta-cloudinary" type="text" placeholder="Ex: Nome do item" />
+      <div class="hint">So o nome da pasta. Se vazio, usa o nome do item.</div>
+
+      <label>Preço</label>
+      <input id="preco" type="text" />
+
+      <label>Descrição</label>
+      <textarea id="descricao" rows="4"></textarea>
+
+      <label>Imagens</label>
+      <input id="imagens" type="file" accept="image/*" multiple required />
+
+      <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+
+    <div id="status"></div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+    <script src="script.js"></script>
+  </body>
+</html>
