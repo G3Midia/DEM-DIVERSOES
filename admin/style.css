@@ -504,6 +504,19 @@ textarea {
   flex-direction: column;
 }
 
+.image-item.marked-for-deletion {
+  opacity: 0.6;
+  border-color: #ef4444;
+}
+
+.image-item.marked-for-deletion .image-actions button.danger {
+  background: var(--primary); /* Verde para "desfazer" */
+}
+
+.image-item.marked-for-deletion .image-actions button.danger:hover {
+  background: var(--primary-dark);
+}
+
 .image-item img {
   width: 100%;
   height: auto;

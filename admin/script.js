@@ -213,7 +213,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const imgDeleteBtn = event.target.closest('.btn-img-delete');
     if (imgDeleteBtn) {
-      imgDeleteBtn.closest('.image-item').remove();
+      event.preventDefault();
+      const imageItem = imgDeleteBtn.closest('.image-item');
+      const img = imageItem.querySelector('img');
+
+      // Se a imagem não tiver 'src', é um preview de um arquivo novo. Apenas remove o elemento.
+      if (!img || !img.src) {
+        imageItem.remove();
+        return;
+      }
+
+      // Alterna a classe para marcar/desmarcar para exclusão
+      imageItem.classList.toggle('marked-for-deletion');
+
+      // Atualiza a UI do botão (ícone e título) para refletir o estado
+      const icon = imgDeleteBtn.querySelector('i');
+      const isMarked = imageItem.classList.contains('marked-for-deletion');
+      
+      imgDeleteBtn.title = isMarked ? 'Desfazer marcação' : 'Marcar para remover';
+      icon?.classList.toggle('fa-trash', !isMarked);
+      icon?.classList.toggle('fa-undo', isMarked);
     }
 
     const imgLeftBtn = event.target.closest('.btn-img-left');
@@ -319,7 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
       let imageUrls = [];
       if (imageFiles.length > 0) {
         statusEl.textContent = 'Fazendo upload das imagens...';
-        const folderName = form.querySelector('#pasta-cloudinary').value.trim() || nome;
+        // Gera nome da pasta: ID - Nome (Estima o próximo ID)
+        const maxId = allProducts.reduce((max, p) => Math.max(max, parseInt(p.id) || 0), 0);
+        const newId = maxId + 1;
+        const folderName = `${newId} - ${nome}`.replace(/[^a-zA-Z0-9À-ÿ -]/g, '');
         imageUrls = await uploadImages(imageFiles, folderName);
       }
 
@@ -360,6 +382,70 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Função para comprimir e converter imagem para WebP (Max 150KB)
+  async function compressImage(file) {
+    // Ignora se não for imagem
+    if (!file.type.startsWith('image/')) return file;
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Redimensiona se for maior que Full HD (1920px) para otimizar tamanho
+        const MAX_DIMENSION = 1920;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Função recursiva para reduzir qualidade até atingir < 150KB
+        const attemptCompression = (quality) => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Erro ao gerar blob da imagem.'));
+              return;
+            }
+
+            // 150KB = 153600 bytes. Limite inferior de qualidade 0.2
+            if (blob.size <= 153600 || quality <= 0.2) {
+              const newName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+              const newFile = new File([blob], newName, {
+                type: "image/webp",
+                lastModified: Date.now(),
+              });
+              resolve(newFile);
+            } else {
+              // Reduz qualidade em 10% e tenta de novo
+              attemptCompression(quality - 0.1);
+            }
+          }, 'image/webp', quality);
+        };
+
+        // Inicia com qualidade 0.9
+        attemptCompression(0.9);
+      };
+
+      img.onerror = (err) => reject(err);
+      img.src = url;
+    });
+  }
+
   async function uploadImages(files, folderName) {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuário não autenticado para upload.");
@@ -376,9 +462,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const { cloudName, apiKey, timestamp, signature, folder } = sigResult.data;
     const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
-    const uploadPromises = Array.from(files).map(file => {
+    const uploadPromises = Array.from(files).map(async (file) => {
+      let fileToUpload = file;
+      try {
+        // Tenta comprimir antes de enviar
+        fileToUpload = await compressImage(file);
+      } catch (err) {
+        console.warn("Falha na compressão, enviando original:", err);
+      }
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', fileToUpload);
       formData.append('api_key', apiKey);
       formData.append('timestamp', timestamp);
       formData.append('signature', signature);
@@ -393,6 +487,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     return urls;
+  }
+
+  // Função auxiliar para extrair o Public ID do Cloudinary
+  function getCloudinaryPublicId(url) {
+    if (!url) return null;
+    try {
+      const urlObj = new URL(url);
+      const path = urlObj.pathname;
+      const uploadIndex = path.indexOf('/upload/');
+      if (uploadIndex === -1) return null;
+
+      let publicId = path.substring(uploadIndex + 8); // Remove prefixo até /upload/
+      publicId = publicId.replace(/^v\d+\//, ''); // Remove versão (ex: v123/)
+      
+      const lastDot = publicId.lastIndexOf('.');
+      if (lastDot !== -1) publicId = publicId.substring(0, lastDot); // Remove extensão
+
+      return decodeURIComponent(publicId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function deleteImage(url) {
+    const publicId = getCloudinaryPublicId(url);
+    console.log("Tentando excluir imagem:", url, "Public ID:", publicId);
+
+    if (!publicId) {
+        console.warn("URL não é do Cloudinary ou inválida. Removendo apenas do DOM.");
+        return true; 
+    }
+    
+    try {
+        const user = auth.currentUser;
+        if (!user) {
+            alert("Sessão expirada. Recarregue a página.");
+            return false;
+        }
+        const token = await user.getIdToken();
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'deleteImage', payload: { public_id: publicId }, token })
+        });
+        
+        if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+        
+        const res = await response.json();
+        console.log("Resposta do servidor (deleteImage):", res);
+
+        if (res.status !== 'success') {
+            console.error("Erro do backend:", res.message);
+            alert(`Erro ao apagar no servidor: ${res.message}`);
+            return false;
+        }
+        return res.status === 'success';
+    } catch (error) {
+        console.error("Erro ao deletar imagem (Rede/Fetch):", error);
+        alert(`Erro de conexão: ${error.message}`);
+        return false;
+    }
   }
   
   function loadManagerData(user) {
@@ -556,7 +710,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
           <label>Adicionar Novas Imagens</label>
           <input type="file" class="edit-new-images" multiple accept="image/*">
-          <input type="text" class="edit-folder-cloudinary" placeholder="Pasta Cloudinary (opcional)">
         </div>
 
         <div class="card-footer">
@@ -588,15 +741,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Nova lógica para pegar os chips na edição também
     const subcategorias = Array.from(card.querySelectorAll('.edit-sub-check:checked')).map(cb => cb.value).join(', ');
 
-    const existingImages = Array.from(card.querySelectorAll('.image-item img')).map(img => img.src);
+    const imagesToDelete = Array.from(card.querySelectorAll('.image-item.marked-for-deletion img')).map(img => img.src);
+    const existingImages = Array.from(card.querySelectorAll('.image-item:not(.marked-for-deletion) img')).map(img => img.src);
+
     const newFilesInput = card.querySelector('.edit-new-images');
     const newFiles = newFilesInput.files;
-    const folderName = card.querySelector('.edit-folder-cloudinary').value.trim() || nome;
+    
+    // Determina o nome da pasta automaticamente
+    let folderName = `${productId}-${nome.trim().replace(/\s+/g, '-')}`.replace(/[^a-zA-Z0-9À-ÿ-]/g, '');
+    // Tenta detectar a pasta existente a partir da primeira imagem, se houver
+    if (existingImages.length > 0) {
+        const publicId = getCloudinaryPublicId(existingImages[0]);
+        if (publicId) {
+            const parts = publicId.split('/');
+            if (parts.length > 1) folderName = parts[0];
+        }
+    }
 
     statusEl.textContent = 'Salvando...';
     saveBtn.disabled = true;
 
     try {
+      console.log("Iniciando atualização do produto...");
+      // Primeiro, apaga as imagens marcadas para exclusão no Cloudinary
+      if (imagesToDelete.length > 0) {
+        statusEl.textContent = `Excluindo ${imagesToDelete.length} imagem(ns)...`;
+        await Promise.all(imagesToDelete.map(url => deleteImage(url)));
+      }
+
       let newImageUrls = [];
       if (newFiles.length > 0) {
         statusEl.textContent = 'Enviando novas imagens...';
@@ -653,6 +825,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const user = auth.currentUser;
       const token = await user.getIdToken();
+
+      // Tenta apagar a pasta do Cloudinary se houver imagens
+      const product = allProducts.find(p => String(p.id) === String(productId));
+      if (product && product.imagens && product.imagens.length > 0) {
+          const publicId = getCloudinaryPublicId(product.imagens[0]);
+          if (publicId && publicId.includes('/')) {
+              const folderName = publicId.split('/')[0];
+              await fetch(API_URL, {
+                  method: 'POST',
+                  body: JSON.stringify({ action: 'deleteFolder', payload: { folder: folderName }, token })
+              }).catch(err => console.error("Erro ao apagar pasta:", err));
+          }
+      }
 
       const response = await fetch(API_URL, {
         method: 'POST',

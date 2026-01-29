@@ -12,6 +12,7 @@ function doGet(e) {
 
 // Nova função doPost para receber chamadas da API externa
 function doPost(e) {
+  if (!e) throw new Error("A função doPost deve ser chamada via requisição HTTP (Web App), não manualmente.");
   try {
     let body = {};
 
@@ -50,6 +51,12 @@ function doPost(e) {
       case "deleteProduct":
         result = deleteProduct(payload);
         break;
+      case "deleteImage":
+        result = deleteImage(payload);
+        break;
+      case "deleteFolder":
+        result = deleteFolder(payload);
+        break;
       default:
         throw new Error("Ação inválida: " + action);
     }
@@ -83,6 +90,10 @@ function getUploadSignature(folderName) {
 }
 
 function saveProduct(payload) {
+  if (payload === undefined) {
+    // Lança um erro mais claro para execução manual no editor
+    throw new Error("Esta função espera dados do formulário. Para testar permissões, execute 'getProducts'.");
+  }
   const data = typeof payload === "string" ? JSON.parse(payload) : payload || {};
   const nome = (data.nome || "").trim();
   if (!nome) throw new Error("Nome e obrigatorio.");
@@ -180,8 +191,9 @@ function updateProduct(payload) {
   return { ok: true, id: id };
 }
 
-function deleteProduct(id) {
-  const itemId = String(id || "").trim();
+function deleteProduct(payload) {
+  const data = typeof payload === "string" ? JSON.parse(payload) : payload || {};
+  const itemId = String(data.id || data || "").trim();
   if (!itemId) throw new Error("ID e obrigatorio.");
 
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
@@ -196,6 +208,61 @@ function deleteProduct(id) {
 
   sheet.deleteRow(index + 2);
   return { ok: true };
+}
+
+function deleteImage(payload) {
+  const publicId = payload.public_id;
+  if (!publicId) throw new Error("Public ID e obrigatorio.");
+
+  const cloudName = getProp_("CLOUDINARY_CLOUD_NAME");
+  const apiKey = getProp_("CLOUDINARY_API_KEY");
+  const apiSecret = getProp_("CLOUDINARY_API_SECRET");
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const params = { public_id: publicId, timestamp: timestamp };
+  const signature = signParams_(params, apiSecret);
+
+  const formData = {
+    public_id: publicId,
+    api_key: apiKey,
+    timestamp: timestamp,
+    signature: signature
+  };
+
+  const options = {
+    method: "post",
+    payload: formData
+  };
+
+  const response = UrlFetchApp.fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
+    options
+  );
+  return JSON.parse(response.getContentText());
+}
+
+function deleteFolder(payload) {
+  const folderName = payload.folder;
+  if (!folderName) throw new Error("Nome da pasta e obrigatorio.");
+
+  const cloudName = getProp_("CLOUDINARY_CLOUD_NAME");
+  const apiKey = getProp_("CLOUDINARY_API_KEY");
+  const apiSecret = getProp_("CLOUDINARY_API_SECRET");
+
+  const authHeader = "Basic " + Utilities.base64Encode(apiKey + ":" + apiSecret);
+  const options = {
+    method: "delete",
+    headers: { Authorization: authHeader },
+    muteHttpExceptions: true,
+  };
+
+  // 1. Apaga recursos dentro da pasta (prefixo)
+  UrlFetchApp.fetch(`https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload?prefix=${folderName}/`, options);
+
+  // 2. Apaga a pasta
+  const response = UrlFetchApp.fetch(`https://api.cloudinary.com/v1_1/${cloudName}/folders/${folderName}`, options);
+  
+  return JSON.parse(response.getContentText());
 }
 
 function getSubcategories() {
