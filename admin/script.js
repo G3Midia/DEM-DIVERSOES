@@ -334,32 +334,40 @@ document.addEventListener('DOMContentLoaded', () => {
     statusEl.style.color = 'var(--muted)';
 
     try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Usuário não autenticado.");
+      const token = await user.getIdToken();
+
+      // 1. Pega o próximo ID do backend para usar no nome da pasta
+      statusEl.textContent = 'Obtendo ID do produto...';
+      const idResponse = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'getNextId', token })
+      });
+      const idResult = await idResponse.json();
+      if (idResult.status !== 'success') throw new Error(idResult.message || 'Falha ao obter ID.');
+      const newId = idResult.data.id;
+
+      // 2. Faz o upload das imagens com o nome da pasta correto
       const imageFiles = form.querySelector('#imagens').files;
       let imageUrls = [];
       if (imageFiles.length > 0) {
         statusEl.textContent = 'Fazendo upload das imagens...';
-        // Gera nome da pasta: ID - Nome (Estima o próximo ID)
-        const maxId = allProducts.reduce((max, p) => Math.max(max, parseInt(p.id) || 0), 0);
-        const newId = maxId + 1;
         const folderName = `${newId} - ${nome}`.replace(/[^a-zA-Z0-9À-ÿ -]/g, '');
         imageUrls = await uploadImages(imageFiles, folderName);
       }
 
+      // 3. Envia os dados para a planilha, incluindo o ID pré-definido
       statusEl.textContent = 'Enviando dados para a planilha...';
       const payload = {
+        id: newId, // Envia o ID obtido para o backend
         nome: nome,
         categoria: form.querySelector('#categoria').value,
-        // Pega todos os checkboxes marcados e junta em uma string separada por vírgula
-        // Isso CORRIGE o erro do .trim() no backend
         subcategorias: Array.from(form.querySelectorAll('input[name="subcategoria"]:checked')).map(cb => cb.value).join(', '),
         preco: form.querySelector('#preco').value,
         descricao: form.querySelector('#descricao').value,
         imagens: imageUrls,
       };
-
-      const user = auth.currentUser;
-      if (!user) throw new Error("Usuário não autenticado.");
-      const token = await user.getIdToken();
 
       const response = await fetch(API_URL, {
         method: 'POST',

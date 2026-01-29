@@ -39,6 +39,9 @@ function doPost(e) {
       case "getUploadSignature":
         result = getUploadSignature(payload);
         break;
+      case "getNextId":
+        result = getNextId();
+        break;
       case "saveProduct":
         result = saveProduct(payload);
         break;
@@ -89,6 +92,10 @@ function getUploadSignature(folderName) {
   return { cloudName, apiKey, timestamp, signature, folder };
 }
 
+function formatId_(id) {
+  return String(id).padStart(4, '0');
+}
+
 function saveProduct(payload) {
   if (payload === undefined) {
     // Lança um erro mais claro para execução manual no editor
@@ -107,22 +114,23 @@ function saveProduct(payload) {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
 
-  // Geração Automática de ID Numérico
-  let nextId = 1;
-  const lastRow = sheet.getLastRow();
-  
-  if (lastRow >= 2) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-    // Filtra apenas números válidos e encontra o maior
-    const numericIds = ids.map(id => Number(id)).filter(n => !isNaN(n) && n > 0);
-    if (numericIds.length > 0) {
-      nextId = Math.max(...numericIds) + 1;
+  // Se um ID for fornecido no payload, usa-o. Caso contrário, gera um novo (fallback).
+  const idToSave = data.id ? formatId_(data.id) : (() => {
+    let nextIdNum = 1;
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+      const numericIds = ids.map(id => Number(id)).filter(n => !isNaN(n) && n > 0);
+      if (numericIds.length > 0) {
+        nextIdNum = Math.max(...numericIds) + 1;
+      }
     }
-  }
+    return formatId_(nextIdNum);
+  })();
 
-  sheet.appendRow([nextId, nome, categoria, subcategorias, preco, descricao, imagens, ""]);
+  sheet.appendRow([idToSave, nome, categoria, subcategorias, preco, descricao, imagens, ""]);
 
-  return { ok: true, id: nextId };
+  return { ok: true, id: idToSave };
 }
 
 function getProducts() {
@@ -135,7 +143,7 @@ function getProducts() {
   const rows = sheet.getRange(2, 1, lastRow - 1, 7).getValues();
   return rows
     .map(([id, nome, categoria, subcategorias, preco, descricao, imagens]) => ({
-      id: String(id || "").trim(),
+      id: formatId_(String(id || "").trim()),
       nome: String(nome || "").trim(),
       categoria: String(categoria || "").trim(),
       subcategorias: String(subcategorias || "")
@@ -185,10 +193,10 @@ function updateProduct(payload) {
     : String(data.imagens || "").trim();
 
   sheet.getRange(row, 1, 1, 7).setValues([
-    [id, nome, categoria, subcategorias, preco, descricao, imagens],
+    [formatId_(id), nome, categoria, subcategorias, preco, descricao, imagens],
   ]);
 
-  return { ok: true, id: id };
+  return { ok: true, id: formatId_(id) };
 }
 
 function deleteProduct(payload) {
@@ -263,6 +271,22 @@ function deleteFolder(payload) {
   const response = UrlFetchApp.fetch(`https://api.cloudinary.com/v1_1/${cloudName}/folders/${folderName}`, options);
   
   return JSON.parse(response.getContentText());
+}
+
+function getNextId() {
+  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
+  let nextId = 1;
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+    // Filtra apenas números válidos e encontra o maior
+    const numericIds = ids.map(id => Number(id)).filter(n => !isNaN(n) && n > 0);
+    if (numericIds.length > 0) {
+      nextId = Math.max(...numericIds) + 1;
+    }
+  }
+  return { id: formatId_(nextId) };
 }
 
 function getSubcategories() {
