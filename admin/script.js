@@ -1,13 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // ATENÇÃO: Substitua com as configurações do seu projeto Firebase
-  const firebaseConfig = {
-    apiKey: "REDACTED",
-    authDomain: "dem-admin.firebaseapp.com",
-    projectId: "dem-admin",
-    storageBucket: "dem-admin.appspot.com",
-    messagingSenderId: "784224507087",
-    appId: "1:784224507087:web:e9e25fa711080ca2c753ba"
-  };
+  const runtimeConfig = window.__ADMIN_CONFIG__ || {};
+  const firebaseConfig = runtimeConfig.firebase;
+  const API_URL = runtimeConfig.apiUrl;
+
+  const configErrors = [];
+  if (!firebaseConfig || !firebaseConfig.apiKey) configErrors.push('firebase.apiKey');
+  if (!firebaseConfig || !firebaseConfig.authDomain) configErrors.push('firebase.authDomain');
+  if (!firebaseConfig || !firebaseConfig.projectId) configErrors.push('firebase.projectId');
+  if (!firebaseConfig || !firebaseConfig.storageBucket) configErrors.push('firebase.storageBucket');
+  if (!firebaseConfig || !firebaseConfig.messagingSenderId) configErrors.push('firebase.messagingSenderId');
+  if (!firebaseConfig || !firebaseConfig.appId) configErrors.push('firebase.appId');
+  if (!API_URL) configErrors.push('apiUrl');
+
+  if (configErrors.length) {
+    const message = `Configuração ausente: ${configErrors.join(', ')}. Atualize admin/config.js.`;
+    console.error(message);
+    const statusEl = document.getElementById('auth-status')
+      || document.getElementById('global-status')
+      || document.getElementById('status');
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.style.color = '#d93025';
+    }
+    return;
+  }
 
   // Inicializa o Firebase
   if (!firebase.apps.length) {
@@ -16,9 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const auth = firebase.auth();
   const db = firebase.firestore();
   const storage = firebase.storage();
-  
-  // URL do seu Google Apps Script (Backend do Sheets)
-  const API_URL = "https://script.google.com/macros/s/AKfycbxgMNP1sis1Ew1gRs9W76jHD43pDlY2sFHy0hwhzelHbbX1q2fswYOM5y7MHIeWlnip/exec";
 
   let allProducts = [];
   let allSubcategories = [];
@@ -67,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // O erro de API Key inválida vem como uma string JSON na mensagem
       if (error.message && error.message.includes("API key not valid")) {
-          return 'Erro de configuração: A chave de API do Firebase é inválida. Verifique o arquivo `admin/script.js`.';
+          return 'Erro de configuração: A chave de API do Firebase é inválida. Verifique o arquivo `admin/config.js`.';
       }
 
       // Mapeamento de códigos de erro comuns do Firebase Auth
