@@ -55,10 +55,10 @@ function doPost(e) {
         result = deleteProduct(payload);
         break;
       case "deleteImage":
-        result = deleteImage(payload);
+        result = deleteImage(payload || body);
         break;
       case "deleteFolder":
-        result = deleteFolder(payload);
+        result = deleteFolder(payload || body);
         break;
       default:
         throw new Error("Ação inválida: " + action);
@@ -76,10 +76,16 @@ function doPost(e) {
   }
 }
 
+function autorizarUrlFetch_() {
+  UrlFetchApp.fetch("https://www.google.com");
+  return { ok: true };
+}
+
 function getUploadSignature(folderName) {
-  const cloudName = getProp_("CLOUDINARY_CLOUD_NAME");
-  const apiKey = getProp_("CLOUDINARY_API_KEY");
-  const apiSecret = getProp_("CLOUDINARY_API_SECRET");
+  const cloudName = (getProp_("CLOUDINARY_CLOUD_NAME") || "").trim();
+  const apiKey = (getProp_("CLOUDINARY_API_KEY") || "").trim();
+  const apiSecret = (getProp_("CLOUDINARY_API_SECRET") || "").trim();
+  if (!cloudName || !apiKey || !apiSecret) throw new Error("Configuração do Cloudinary incompleta.");
   const baseFolder = getProp_("CLOUDINARY_BASE_FOLDER") || "DEMDIV/Decoracoes";
 
   const timestamp = Math.floor(Date.now() / 1000);
@@ -219,43 +225,54 @@ function deleteProduct(payload) {
 }
 
 function deleteImage(payload) {
-  const publicId = payload.public_id;
+  const data = payload || {};
+  const publicId = data.public_id || data.publicId || (typeof data === "string" ? data : "");
   if (!publicId) throw new Error("Public ID e obrigatorio.");
 
-  const cloudName = getProp_("CLOUDINARY_CLOUD_NAME");
-  const apiKey = getProp_("CLOUDINARY_API_KEY");
-  const apiSecret = getProp_("CLOUDINARY_API_SECRET");
+  const cloudName = (getProp_("CLOUDINARY_CLOUD_NAME") || "").trim();
+  const apiKey = (getProp_("CLOUDINARY_API_KEY") || "").trim();
+  const apiSecret = (getProp_("CLOUDINARY_API_SECRET") || "").trim();
+  if (!cloudName || !apiKey || !apiSecret) throw new Error("Configuração do Cloudinary incompleta.");
+
+  const publicIdNormalized = String(publicId).normalize("NFC");
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const params = { public_id: publicId, timestamp: timestamp };
+  const params = { public_id: publicIdNormalized, timestamp: timestamp };
   const signature = signParams_(params, apiSecret);
 
-  const formData = {
-    public_id: publicId,
-    api_key: apiKey,
-    timestamp: timestamp,
-    signature: signature
-  };
+  const formData = [
+    "public_id=" + encodeURIComponent(publicIdNormalized),
+    "api_key=" + encodeURIComponent(apiKey),
+    "timestamp=" + encodeURIComponent(String(timestamp)),
+    "signature=" + encodeURIComponent(signature)
+  ].join("&");
 
   const options = {
     method: "post",
-    payload: formData
+    payload: formData,
+    contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+    muteHttpExceptions: true
   };
 
   const response = UrlFetchApp.fetch(
     `https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`,
     options
   );
-  return JSON.parse(response.getContentText());
+  const contentText = response.getContentText();
+  const statusCode = response.getResponseCode();
+  if (statusCode >= 400) throw new Error(`Cloudinary ${statusCode}: ${contentText}`);
+  return JSON.parse(contentText);
 }
 
 function deleteFolder(payload) {
-  const folderName = payload.folder;
+  const data = payload || {};
+  const folderName = data.folder || (typeof data === "string" ? data : "");
   if (!folderName) throw new Error("Nome da pasta e obrigatorio.");
 
-  const cloudName = getProp_("CLOUDINARY_CLOUD_NAME");
-  const apiKey = getProp_("CLOUDINARY_API_KEY");
-  const apiSecret = getProp_("CLOUDINARY_API_SECRET");
+  const cloudName = (getProp_("CLOUDINARY_CLOUD_NAME") || "").trim();
+  const apiKey = (getProp_("CLOUDINARY_API_KEY") || "").trim();
+  const apiSecret = (getProp_("CLOUDINARY_API_SECRET") || "").trim();
+  if (!cloudName || !apiKey || !apiSecret) throw new Error("Configuração do Cloudinary incompleta.");
 
   const authHeader = "Basic " + Utilities.base64Encode(apiKey + ":" + apiSecret);
   const options = {

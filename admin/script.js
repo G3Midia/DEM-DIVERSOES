@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (currentPage === 'index.html') {
             loadManagerData(user);
         }
-        if (currentPage === 'admin.html') {
+        if (currentPage === 'novoitem.html') {
             loadAdminFormData(user);
         }
       }
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Lógica de Logout (para Admin.html e index.html) ---
+  // --- Lógica de Logout (para novoitem.html e index.html) ---
   const logoutButton = document.getElementById('logout-button');
   logoutButton?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -161,8 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- Lógica da página Adicionar Item (Admin.html) ---
-  if (currentPage === 'admin.html') {
+  // --- Lógica da página Adicionar Item (novoitem.html) ---
+  if (currentPage === 'novoitem.html') {
     const form = document.getElementById('product-form');
     form?.addEventListener('submit', handleSaveProduct);
   }

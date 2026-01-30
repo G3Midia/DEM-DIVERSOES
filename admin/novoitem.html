@@ -6,8 +6,6 @@
     <title>Admin Catalogo</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
   </head>
   <body>
     <nav class="admin-nav">
@@ -15,7 +13,7 @@
         <span class="admin-nav-title">Painel Admin</span>
         <div class="admin-nav-links">
           <a href="index.html">Gerenciar itens</a>
-          <a class="is-active" href="Admin.html">Adicionar item</a>
+          <a class="is-active" href="novoitem.html">Adicionar item</a>
           <a href="#" id="logout-button">Sair</a>
         </div>
       </div>
@@ -38,10 +36,6 @@
       <label for="subcategorias">Subcategorias</label>
       <div id="subcategorias-container" class="chip-container"></div>
       <div class="hint">Toque para selecionar uma ou mais opções.</div>
-
-      <label for="pasta-cloudinary">Pasta no Cloudinary</label>
-      <input id="pasta-cloudinary" type="text" placeholder="Ex: Nome do item" />
-      <div class="hint">So o nome da pasta. Se vazio, usa o nome do item.</div>
 
       <label for="preco">Preço</label>
       <input id="preco" type="text" />
