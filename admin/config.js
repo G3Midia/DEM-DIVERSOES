@@ -1,6 +1,6 @@
 window.__ADMIN_CONFIG__ = {
   firebase: {
-    apiKey: "AIzaSyDk-yu5TPLxa5wpC4yWn9sGHm2ksoE7gFA",
+    apiKey: "AIzaSyAcBhdBMWQexpbvkBxmhFhZXLY5B4t_Ijk",
     authDomain: "dem-admin.firebaseapp.com",
     projectId: "dem-admin",
     storageBucket: "dem-admin.appspot.com",
