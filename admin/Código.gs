@@ -173,8 +173,9 @@ function getManagerData() {
 
 function updateProduct(payload) {
   const data = typeof payload === "string" ? JSON.parse(payload) : payload || {};
-  const id = String(data.id || "").trim();
-  if (!id) throw new Error("ID e obrigatorio.");
+  const rawId = String(data.id || "").trim();
+  if (!rawId) throw new Error("ID e obrigatorio.");
+  const normalizedId = formatId_(rawId);
 
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
@@ -183,8 +184,8 @@ function updateProduct(payload) {
   if (lastRow < 2) throw new Error("Nenhum item encontrado.");
 
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const index = ids.findIndex((value) => String(value || "").trim() === id);
-  if (index === -1) throw new Error("Item nao encontrado: " + id);
+  const index = ids.findIndex((value) => formatId_(String(value || "").trim()) === normalizedId);
+  if (index === -1) throw new Error("Item nao encontrado: " + normalizedId);
 
   const row = index + 2;
   const nome = String(data.nome || "").trim();
@@ -199,16 +200,17 @@ function updateProduct(payload) {
     : String(data.imagens || "").trim();
 
   sheet.getRange(row, 1, 1, 7).setValues([
-    [formatId_(id), nome, categoria, subcategorias, preco, descricao, imagens],
+    [normalizedId, nome, categoria, subcategorias, preco, descricao, imagens],
   ]);
 
-  return { ok: true, id: formatId_(id) };
+  return { ok: true, id: normalizedId };
 }
 
 function deleteProduct(payload) {
   const data = typeof payload === "string" ? JSON.parse(payload) : payload || {};
-  const itemId = String(data.id || data || "").trim();
-  if (!itemId) throw new Error("ID e obrigatorio.");
+  const rawItemId = String(data.id || data || "").trim();
+  if (!rawItemId) throw new Error("ID e obrigatorio.");
+  const normalizedItemId = formatId_(rawItemId);
 
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
@@ -217,8 +219,8 @@ function deleteProduct(payload) {
   if (lastRow < 2) throw new Error("Nenhum item encontrado.");
 
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const index = ids.findIndex((value) => String(value || "").trim() === itemId);
-  if (index === -1) throw new Error("Item nao encontrado: " + itemId);
+  const index = ids.findIndex((value) => formatId_(String(value || "").trim()) === normalizedItemId);
+  if (index === -1) throw new Error("Item nao encontrado: " + normalizedItemId);
 
   sheet.deleteRow(index + 2);
   return { ok: true };
