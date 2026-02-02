@@ -36,6 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let allProducts = [];
   let allSubcategories = [];
   const SCROLL_ANCHOR_KEY = 'admin-scroll-anchor-id';
+  const normalize = (value = '') =>
+    String(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
 
   const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
@@ -188,15 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.getElementById('search');
     searchInput?.addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase();
-      const filtered = allProducts.filter(p => 
-        p.nome.toLowerCase().includes(term) ||
-        String(p.id).toLowerCase().includes(term) ||
-        p.categoria.toLowerCase().includes(term) ||
-        (Array.isArray(p.subcategorias)
-          ? p.subcategorias.join(' ').toLowerCase().includes(term)
-          : String(p.subcategorias || '').toLowerCase().includes(term))
-      );
+      const term = normalize(e.target.value);
+      const filtered = allProducts.filter(p => {
+        const subcats = Array.isArray(p.subcategorias)
+          ? p.subcategorias.join(' ')
+          : String(p.subcategorias || '');
+        const text = normalize(
+          `${p.nome} ${p.id} ${p.categoria} ${subcats}`
+        );
+        return text.includes(term);
+      });
       renderAllProducts(filtered);
       document.getElementById('global-status').textContent = `${filtered.length} de ${allProducts.length} itens exibidos.`;
     });

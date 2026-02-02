@@ -275,7 +275,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const nome = row.nome || row.Nome || "";
           const categoria = row.categoria || row.Categoria || "";
-          const subcategoria = row.subcategoria || row.Subcategoria || "";
+          const rawSubcategorias =
+            row.subcategorias ||
+            row.Subcategorias ||
+            row.subcategoria ||
+            row.Subcategoria ||
+            "";
           const preco = row.preco || row.Preco || row.Preço || "";
           const descricao = row.descricao || row.Descricao || row.Descrição || "";
           const imagens = row.imagens || row.Imagens || "";
@@ -286,10 +291,12 @@ document.addEventListener("DOMContentLoaded", () => {
             id: String(id),
             nome: String(nome),
             categoria: normalize(categoria),
-            subcategorias: String(subcategoria)
-              .split(",")
-              .map((s) => normalize(s))
-              .filter(Boolean),
+            subcategorias: Array.isArray(rawSubcategorias)
+              ? rawSubcategorias.map((s) => normalize(String(s))).filter(Boolean)
+              : String(rawSubcategorias)
+                  .split(",")
+                  .map((s) => normalize(s))
+                  .filter(Boolean),
             preco: String(preco),
             descricao: String(descricao),
             imagens: imagensList.length
