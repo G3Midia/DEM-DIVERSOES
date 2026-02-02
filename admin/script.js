@@ -196,9 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput?.addEventListener('input', (e) => {
       const term = normalize(e.target.value);
       const filtered = allProducts.filter(p => {
-        const subcats = Array.isArray(p.subcategorias)
-          ? p.subcategorias.join(' ')
-          : String(p.subcategorias || '');
+        const subcatsRaw = p.subcategorias ?? p.subcategoria ?? '';
+        const subcats = Array.isArray(subcatsRaw)
+          ? subcatsRaw.join(' ')
+          : String(subcatsRaw);
         const text = normalize(
           `${p.nome} ${p.id} ${p.categoria} ${subcats}`
         );
