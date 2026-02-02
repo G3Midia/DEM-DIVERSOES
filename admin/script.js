@@ -192,7 +192,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const filtered = allProducts.filter(p => 
         p.nome.toLowerCase().includes(term) ||
         String(p.id).toLowerCase().includes(term) ||
-        p.categoria.toLowerCase().includes(term)
+        p.categoria.toLowerCase().includes(term) ||
+        (Array.isArray(p.subcategorias)
+          ? p.subcategorias.join(' ').toLowerCase().includes(term)
+          : String(p.subcategorias || '').toLowerCase().includes(term))
       );
       renderAllProducts(filtered);
       document.getElementById('global-status').textContent = `${filtered.length} de ${allProducts.length} itens exibidos.`;
