@@ -184,7 +184,11 @@ function updateProduct(payload) {
   if (lastRow < 2) throw new Error("Nenhum item encontrado.");
 
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const index = ids.findIndex((value) => formatId_(String(value || "").trim()) === normalizedId);
+  const index = ids.findIndex((value) => {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return false;
+    return rawValue === rawId || formatId_(rawValue) === normalizedId;
+  });
   if (index === -1) throw new Error("Item nao encontrado: " + normalizedId);
 
   const row = index + 2;
@@ -219,7 +223,11 @@ function deleteProduct(payload) {
   if (lastRow < 2) throw new Error("Nenhum item encontrado.");
 
   const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-  const index = ids.findIndex((value) => formatId_(String(value || "").trim()) === normalizedItemId);
+  const index = ids.findIndex((value) => {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return false;
+    return rawValue === rawItemId || formatId_(rawValue) === normalizedItemId;
+  });
   if (index === -1) throw new Error("Item nao encontrado: " + normalizedItemId);
 
   sheet.deleteRow(index + 2);
