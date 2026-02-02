@@ -99,7 +99,10 @@ function getUploadSignature(folderName) {
 }
 
 function formatId_(id) {
-  return String(id).padStart(4, '0');
+  const raw = String(id || "").trim();
+  if (!raw) return "";
+  const asNumber = Number(raw);
+  return Number.isFinite(asNumber) ? String(Math.trunc(asNumber)) : raw;
 }
 
 function saveProduct(payload) {

@@ -113,6 +113,36 @@ document.addEventListener("DOMContentLoaded", () => {
       product: { width: 960, height: 720 },
       thumb: { width: 200, height: 150 },
     };
+
+    const parseImageList = (value) => {
+      if (!value) return [];
+      if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
+      const raw = String(value).trim();
+      if (!raw) return [];
+      if (raw.startsWith("[") && raw.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            return parsed.map((v) => String(v).trim()).filter(Boolean);
+          }
+        } catch (err) {
+          // Fallback to string parsing below.
+        }
+      }
+      const matches = [...raw.matchAll(/https?:\/\//g)];
+      if (matches.length === 0) {
+        return raw
+          .split(/[\n;]+/)
+          .map((v) => v.trim())
+          .filter(Boolean);
+      }
+      const urls = matches.map((match, index) => {
+        const start = match.index ?? 0;
+        const end = index + 1 < matches.length ? (matches[index + 1].index ?? raw.length) : raw.length;
+        return raw.slice(start, end).replace(/^[,\\s]+|[,\\s]+$/g, "").trim();
+      });
+      return urls.filter(Boolean);
+    };
   
     const buildCloudinaryTransform = ({ width, height } = {}) => {
       const parts = ["f_webp", "q_auto:good", "fl_strip_profile"];
@@ -249,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const preco = row.preco || row.Preco || row.Preço || "";
           const descricao = row.descricao || row.Descricao || row.Descrição || "";
           const imagens = row.imagens || row.Imagens || "";
+          const imagensList = parseImageList(imagens);
   
   
           const product = {
@@ -261,10 +292,12 @@ document.addEventListener("DOMContentLoaded", () => {
               .filter(Boolean),
             preco: String(preco),
             descricao: String(descricao),
-            imagens: String(imagens)
-              .split(",")
-              .map((i) => i.trim())
-              .filter(Boolean),
+            imagens: imagensList.length
+              ? imagensList
+              : String(imagens)
+                  .split(",")
+                  .map((i) => i.trim())
+                  .filter(Boolean),
           };
   
           products.push(product);
