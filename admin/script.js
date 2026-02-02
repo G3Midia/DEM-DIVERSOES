@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let allProducts = [];
   let allSubcategories = [];
+  const SCROLL_ANCHOR_KEY = 'admin-scroll-anchor-id';
 
   const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
@@ -198,23 +199,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function setScrollAnchor(productId) {
+    if (!productId) return;
+    try {
+      sessionStorage.setItem(SCROLL_ANCHOR_KEY, String(productId));
+    } catch (e) {
+      // ignora falhas de storage
+    }
+  }
+
+  function scrollToProduct(productId, behavior = 'auto') {
+    if (!productId) return;
+    const card = document.querySelector(`.card-list[data-id="${productId}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: 'start', behavior });
+  }
+
+  function restoreScrollAnchor() {
+    let productId = null;
+    try {
+      productId = sessionStorage.getItem(SCROLL_ANCHOR_KEY);
+    } catch (e) {
+      productId = null;
+    }
+    if (!productId) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToProduct(productId, 'auto');
+      });
+    });
+  }
+
   function handleProductAction(event) {
     const editButton = event.target.closest('.btn-edit');
     if (editButton) {
       event.preventDefault();
       const card = editButton.closest('.card-list');
+      setScrollAnchor(card?.dataset.id);
       toggleEditMode(card.dataset.id);
     }
 
     const cancelButton = event.target.closest('.btn-cancel-edit');
     if (cancelButton) {
       event.preventDefault();
+      setScrollAnchor(cancelButton.dataset.id);
       toggleEditMode(cancelButton.dataset.id);
+      scrollToProduct(cancelButton.dataset.id, 'auto');
     }
 
     const saveButton = event.target.closest('.btn-save-changes');
     if (saveButton) {
       event.preventDefault();
+      setScrollAnchor(saveButton.dataset.id);
       handleUpdateProduct(saveButton.dataset.id);
     }
 
@@ -630,6 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           `;
       }).join('');
+
+      restoreScrollAnchor();
   }
 
   function renderProductCard(productId) {
@@ -827,6 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       toggleEditMode(productId);
+      scrollToProduct(productId, 'auto');
       
     } catch (error) {
       console.error(error);
@@ -852,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (product && product.imagens && product.imagens.length > 0) {
           const publicId = getCloudinaryPublicId(product.imagens[0]);
           if (publicId && publicId.includes('/')) {
-              const folderName = publicId.split('/')[0];
+              const folderName = publicId.split('/').slice(0, -1).join('/');
               await fetch(API_URL, {
                   method: 'POST',
                   body: JSON.stringify({ action: 'deleteFolder', payload: { folder: folderName }, token })
