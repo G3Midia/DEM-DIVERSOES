@@ -211,6 +211,13 @@ form#login-form {
   text-align: center;
 }
 
+@media (max-width: 600px) {
+  form#login-form {
+    max-width: 90vw;
+    padding: 28px 22px;
+  }
+}
+
 #login-form .hint {
     margin-top: -12px;
 }
