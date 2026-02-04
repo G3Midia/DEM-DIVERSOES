@@ -76,7 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Lógica da página de Login (login.html) ---
   if (currentPage === 'login.html') {
     const loginButton = document.getElementById('login-button');
-    const signupButton = document.getElementById('signup-button');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const togglePasswordButton = document.getElementById('toggle-password');
@@ -120,7 +119,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // Desabilita os botões para evitar cliques múltiplos
       loginButton.disabled = true;
-      signupButton.disabled = true;
       showAuthStatus('Autenticando...', false);
 
       auth.signInWithEmailAndPassword(email, password)
@@ -134,7 +132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         .finally(() => {
           // Reabilita os botões em caso de falha no login
           loginButton.disabled = false;
-          signupButton.disabled = false;
         });
     };
 
@@ -154,22 +151,6 @@ document.addEventListener('DOMContentLoaded', () => {
       passwordIcon?.classList.toggle('fa-eye', !isPassword);
     });
 
-    signupButton?.addEventListener('click', () => {
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      if (!email || !password) {
-        showAuthStatus('Por favor, preencha email e senha para criar a conta.', true);
-        return;
-      }
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(userCredential => {
-          showAuthStatus('Conta criada com sucesso! Você já pode entrar.', false);
-        })
-        .catch(error => {
-          console.error("Firebase signup error:", error);
-          showAuthStatus(getFirebaseErrorMessage(error), true);
-        });
-    });
   }
 
   // --- Lógica de Logout (para novoitem.html e index.html) ---

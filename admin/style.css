@@ -212,9 +212,15 @@ form#login-form {
 }
 
 @media (max-width: 600px) {
+  .login-container {
+    min-height: 100vh;
+    padding: 0;
+  }
+
   form#login-form {
-    max-width: 90vw;
-    padding: 28px 22px;
+    width: 90vw;
+    max-width: none;
+    padding: 26px 20px;
   }
 }
 
