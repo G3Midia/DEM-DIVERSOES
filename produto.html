@@ -68,7 +68,12 @@
   </header>
 
   <!-- ================= PRODUTO ================= -->
-  <main class="product">
+  <main class="product" itemscope itemtype="https://schema.org/Product">
+    <meta id="product-sku" itemprop="sku" content="">
+    <meta id="product-id" itemprop="productID" content="">
+    <meta id="product-category" itemprop="category" content="">
+    <meta id="product-brand" itemprop="brand" content="D&M Diversões">
+    <meta id="product-url" itemprop="url" content="">
 
     <!-- ===== CARROSSEL DE IMAGENS ===== -->
     <section class="product-gallery">
@@ -98,15 +103,18 @@
     <!-- ===== INFORMAÇÕES ===== -->
     <section class="product-info">
 
-      <h1 id="product-name" class="product-title">
+      <h1 id="product-name" class="product-title" itemprop="name">
         <!-- Nome do produto -->
       </h1>
 
-      <p id="product-price" class="product-price">
-        <!-- Preço -->
+      <p class="product-price" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+        <meta itemprop="priceCurrency" content="BRL">
+        <meta id="product-price-meta" itemprop="price" content="">
+        <link id="product-availability" itemprop="availability" href="https://schema.org/InStock">
+        <span id="product-price"></span>
       </p>
 
-      <p id="product-description" class="product-description">
+      <p id="product-description" class="product-description" itemprop="description">
         <!-- Descrição -->
       </p>
 

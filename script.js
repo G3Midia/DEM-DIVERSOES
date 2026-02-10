@@ -108,6 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .trim();
   
     const CLOUDINARY_MARKER = "/image/upload/";
+    const META_BRAND = "D&M Diversões";
+    const PRICE_CURRENCY = "BRL";
     const IMAGE_SIZES = {
       card: { width: 640, height: 480 },
       product: { width: 960, height: 720 },
@@ -218,26 +220,101 @@ document.addEventListener("DOMContentLoaded", () => {
       const value = Number.parseFloat(normalized);
       return Number.isFinite(value) ? value : null;
     };
-  
-    const getPendingViewId = () =>
-      sessionStorage.getItem("pending_viewcontent_id");
-    const setPendingViewId = (id) =>
-      sessionStorage.setItem("pending_viewcontent_id", String(id));
-    const clearPendingViewId = () =>
-      sessionStorage.removeItem("pending_viewcontent_id");
-  
-    const trackViewContent = (product, fromClick = false) => {
+
+    const stripHtml = (value = "") =>
+      String(value)
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const setContentById = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (value === undefined || value === null || value === "") {
+        el.removeAttribute("content");
+        return;
+      }
+      el.setAttribute("content", String(value));
+    };
+
+    const setHrefById = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el || !value) return;
+      el.setAttribute("href", value);
+    };
+
+    const upsertJsonLd = (id, data) => {
+      if (!data) return;
+      const head = document.head || document.querySelector("head");
+      if (!head) return;
+      let script = document.getElementById(id);
+      if (!script) {
+        script = document.createElement("script");
+        script.type = "application/ld+json";
+        script.id = id;
+        head.appendChild(script);
+      }
+      script.textContent = JSON.stringify(data);
+    };
+
+    const applyProductStructuredData = (product) => {
+      if (!product) return;
+      const category = product.categoriaOriginal || product.categoria || "";
+      const priceValue = parsePriceValue(product.preco);
+      const url = window.location.href;
+
+      setContentById("product-sku", product.id);
+      setContentById("product-id", product.id);
+      setContentById("product-category", category);
+      setContentById("product-brand", META_BRAND);
+      setContentById("product-url", url);
+      setContentById(
+        "product-price-meta",
+        priceValue !== null ? priceValue.toFixed(2) : ""
+      );
+      setHrefById("product-availability", "https://schema.org/InStock");
+
+      const images = Array.isArray(product.imagens)
+        ? product.imagens
+            .map((img) => formatImageUrl(img, "product"))
+            .filter(Boolean)
+        : [];
+
+      upsertJsonLd("product-jsonld", {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.nome,
+        description: stripHtml(product.descricao),
+        image: images.length ? images : undefined,
+        sku: String(product.id),
+        productID: String(product.id),
+        category: category || undefined,
+        brand: { "@type": "Brand", name: META_BRAND },
+        offers:
+          priceValue !== null
+            ? {
+                "@type": "Offer",
+                price: priceValue.toFixed(2),
+                priceCurrency: PRICE_CURRENCY,
+                availability: "https://schema.org/InStock",
+                url: url,
+              }
+            : undefined,
+        url: url,
+      });
+    };
+
+    const trackViewContent = (product) => {
       if (!product) return;
       const value = parsePriceValue(product.preco);
       trackEvent("ViewContent", {
         content_name: product.nome,
         content_ids: [String(product.id)],
         content_type: "product",
-        content_category: product.categoria,
+        content_category: product.categoriaOriginal || product.categoria,
         value: value ?? undefined,
-        currency: value ? "BRL" : undefined,
+        currency: value ? PRICE_CURRENCY : undefined,
       });
-      if (fromClick) setPendingViewId(product.id);
     };
   
     const trackSearch = (term) => {
@@ -274,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!id) return;
 
           const nome = row.nome || row.Nome || "";
-          const categoria = row.categoria || row.Categoria || "";
+          const categoriaRaw = row.categoria || row.Categoria || "";
           const rawSubcategorias =
             row.subcategorias ||
             row.Subcategorias ||
@@ -290,7 +367,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const product = {
             id: String(id),
             nome: String(nome),
-            categoria: normalize(categoria),
+            categoria: normalize(categoriaRaw),
+            categoriaOriginal: String(categoriaRaw).trim(),
             subcategorias: Array.isArray(rawSubcategorias)
               ? rawSubcategorias.map((s) => normalize(String(s))).filter(Boolean)
               : String(rawSubcategorias)
@@ -327,7 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
               imagesEl.insertAdjacentHTML(
                 "beforeend",
                 `<li class="splide__slide">
-                  <img src="${imageUrl}" alt="${product.nome}" data-index="${productOriginalImages.length - 1}">
+                  <img src="${imageUrl}" alt="${product.nome}" data-index="${productOriginalImages.length - 1}" itemprop="image">
                 </li>`
               );
               if (thumbsEl) {
@@ -400,12 +478,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
   
         if (productId && currentProduct) {
-          const pendingId = getPendingViewId();
-          if (pendingId && String(currentProduct.id) === String(pendingId)) {
-            clearPendingViewId();
-          } else {
-            trackViewContent(currentProduct);
-          }
+          applyProductStructuredData(currentProduct);
+          trackViewContent(currentProduct);
         }
   
         /* ===== RECOMENDADOS ===== */
@@ -641,16 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   
     document.addEventListener("click", (event) => {
-      const productLink = event.target.closest("a.product-card");
-      if (productLink) {
-        const productIdFromLink = productLink.getAttribute("data-product-id");
-        const product = products.find(
-          (p) => String(p.id) === String(productIdFromLink)
-        );
-        trackViewContent(product, true);
-        return;
-      }
-  
       const contactLink = event.target.closest("a[href]");
       if (!contactLink) return;
       const href = contactLink.getAttribute("href") || "";
