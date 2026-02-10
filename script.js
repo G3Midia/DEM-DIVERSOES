@@ -261,6 +261,46 @@ document.addEventListener("DOMContentLoaded", () => {
       script.textContent = JSON.stringify(data);
     };
 
+    const upsertMetaTag = (property, content, attr = "property") => {
+      if (!property || content === undefined || content === null || content === "")
+        return;
+      const head = document.head || document.querySelector("head");
+      if (!head) return;
+      const selector = `meta[${attr}="${property}"]`;
+      let tag = head.querySelector(selector);
+      if (!tag) {
+        tag = document.createElement("meta");
+        tag.setAttribute(attr, property);
+        head.appendChild(tag);
+      }
+      tag.setAttribute("content", String(content));
+    };
+
+    const applyOpenGraphTags = (product, options = {}) => {
+      if (!product) return;
+      const { url, priceValue, image } = options;
+      const description = stripHtml(product.descricao);
+      const category = product.categoriaOriginal || product.categoria || "";
+      const groupId = product.groupId ? String(product.groupId) : String(product.id);
+
+      upsertMetaTag("og:type", "product");
+      upsertMetaTag("og:title", product.nome);
+      if (description) upsertMetaTag("og:description", description);
+      if (url) upsertMetaTag("og:url", url);
+      if (image) upsertMetaTag("og:image", image);
+
+      upsertMetaTag("product:brand", META_BRAND);
+      upsertMetaTag("product:availability", "in stock");
+      upsertMetaTag("product:condition", "new");
+      if (priceValue !== null) {
+        upsertMetaTag("product:price:amount", priceValue.toFixed(2));
+        upsertMetaTag("product:price:currency", PRICE_CURRENCY);
+      }
+      upsertMetaTag("product:retailer_item_id", product.id);
+      upsertMetaTag("product:item_group_id", groupId);
+      if (category) upsertMetaTag("product:category", category);
+    };
+
     const applyProductStructuredData = (product) => {
       if (!product) return;
       const category = product.categoriaOriginal || product.categoria || "";
@@ -334,6 +374,12 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             : undefined,
         url: url,
+      });
+
+      applyOpenGraphTags(product, {
+        url,
+        priceValue,
+        image: images.length ? images[0] : "",
       });
     };
 
