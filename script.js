@@ -260,7 +260,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const applyProductStructuredData = (product) => {
       if (!product) return;
       const category = product.categoriaOriginal || product.categoria || "";
+      const categoryKey = category ? normalize(category) : "";
       const priceValue = parsePriceValue(product.preco);
+      const groupId = product.groupId ? String(product.groupId) : String(product.id);
       const url = window.location.href;
 
       setContentById("product-sku", product.id);
@@ -268,6 +270,9 @@ document.addEventListener("DOMContentLoaded", () => {
       setContentById("product-category", category);
       setContentById("product-brand", META_BRAND);
       setContentById("product-url", url);
+      setContentById("product-group-id", groupId);
+      setContentById("product-type-value", category);
+      setContentById("product-custom-label-0-value", categoryKey);
       setContentById(
         "product-price-meta",
         priceValue !== null ? priceValue.toFixed(2) : ""
@@ -280,6 +285,28 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean)
         : [];
 
+      const additionalProperty = [
+        {
+          "@type": "PropertyValue",
+          propertyID: "item_group_id",
+          value: groupId,
+        },
+      ];
+      if (category) {
+        additionalProperty.push({
+          "@type": "PropertyValue",
+          propertyID: "product_type",
+          value: category,
+        });
+      }
+      if (categoryKey) {
+        additionalProperty.push({
+          "@type": "PropertyValue",
+          propertyID: "custom_label_0",
+          value: categoryKey,
+        });
+      }
+
       upsertJsonLd("product-jsonld", {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -290,12 +317,14 @@ document.addEventListener("DOMContentLoaded", () => {
         productID: String(product.id),
         category: category || undefined,
         brand: { "@type": "Brand", name: META_BRAND },
+        additionalProperty,
         offers:
           priceValue !== null
             ? {
                 "@type": "Offer",
                 price: priceValue.toFixed(2),
                 priceCurrency: PRICE_CURRENCY,
+                itemCondition: "https://schema.org/NewCondition",
                 availability: "https://schema.org/InStock",
                 url: url,
               }
@@ -358,6 +387,14 @@ document.addEventListener("DOMContentLoaded", () => {
             row.subcategoria ||
             row.Subcategoria ||
             "";
+          const groupIdRaw =
+            row.item_group_id ||
+            row.itemGroupId ||
+            row.item_group ||
+            row.groupId ||
+            row.grupo ||
+            row.Grupo ||
+            "";
           const preco = row.preco || row.Preco || row.Preço || "";
           const descricao = row.descricao || row.Descricao || row.Descrição || "";
           const imagens = row.imagens || row.Imagens || "";
@@ -375,6 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   .split(",")
                   .map((s) => normalize(s))
                   .filter(Boolean),
+            groupId: String(groupIdRaw || "").trim(),
             preco: String(preco),
             descricao: String(descricao),
             imagens: imagensList.length
