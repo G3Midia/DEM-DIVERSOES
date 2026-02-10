@@ -35,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let splideDecor = null;
     let splideRelated = null;
     let isSearchFocused = false;
+    let homeRenderTimer = null;
+    let homeRenderedAll = false;
   
     const revealObserver =
       "IntersectionObserver" in window
@@ -110,6 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const CLOUDINARY_MARKER = "/image/upload/";
     const META_BRAND = "D&M Diversões";
     const PRICE_CURRENCY = "BRL";
+    const HOME_INITIAL_LIMIT = 18;
+    const HOME_DEFER_FULL_RENDER = true;
     const IMAGE_SIZES = {
       card: { width: 640, height: 480 },
       product: { width: 960, height: 720 },
@@ -366,6 +370,38 @@ document.addEventListener("DOMContentLoaded", () => {
         timer = setTimeout(() => fn(...args), delay);
       };
     };
+
+    const cancelHomeRender = () => {
+      if (!homeRenderTimer) return;
+      if (typeof window.cancelIdleCallback === "function") {
+        window.cancelIdleCallback(homeRenderTimer);
+      } else {
+        clearTimeout(homeRenderTimer);
+      }
+      homeRenderTimer = null;
+    };
+
+    const scheduleHomeFullRender = () => {
+      if (!HOME_DEFER_FULL_RENDER || HOME_INITIAL_LIMIT <= 0 || homeRenderedAll)
+        return;
+      cancelHomeRender();
+      const run = () => {
+        homeRenderTimer = null;
+        const hasSearch = searchInput && searchInput.value.trim().length > 0;
+        if (hasSearch) return;
+        homeRenderedAll = true;
+        renderHome(products);
+      };
+
+      if (typeof window.requestIdleCallback === "function") {
+        homeRenderTimer = window.requestIdleCallback(run, { timeout: 2000 });
+      } else {
+        homeRenderTimer = window.setTimeout(run, 1200);
+      }
+    };
+
+    const isHomeLimited = () =>
+      HOME_INITIAL_LIMIT > 0 && (!HOME_DEFER_FULL_RENDER || !homeRenderedAll);
   
     /* ================= FETCH ================= */
     fetch(sheetUrl)
@@ -471,7 +507,10 @@ document.addEventListener("DOMContentLoaded", () => {
         products.reverse();
 
         /* ===== HOME ===== */
-        if (allList) renderHome(products);
+        if (allList) {
+          renderHome(products);
+          scheduleHomeFullRender();
+        }
   
         /* ===== SPLIDE PRODUTO ===== */
         if (productId && imagesEl) {
@@ -535,11 +574,27 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ================= HOME ================= */
     function renderHome(list, searching = false) {
       if (!allList) return;
-  
+
       allList.innerHTML = "";
       decorList && (decorList.innerHTML = "");
-  
-      list.forEach((p) => {
+
+      const limitActive = !searching && isHomeLimited();
+      const allLimit = limitActive ? HOME_INITIAL_LIMIT : Infinity;
+      const decorLimit = limitActive && decorList ? HOME_INITIAL_LIMIT : Infinity;
+      let allCount = 0;
+      let decorCount = 0;
+
+      for (const p of list) {
+        const isDecor = !searching && p.categoria === "decoracoes" && decorList;
+        if (isDecor && decorCount >= decorLimit) {
+          if (!decorList || allCount >= allLimit) break;
+          continue;
+        }
+        if (!isDecor && allCount >= allLimit) {
+          if (!decorList || decorCount >= decorLimit) break;
+          continue;
+        }
+
         const cardImage = formatImageUrl(p.imagens[0], "card");
         const card = `
           <li class="splide__slide">
@@ -552,14 +607,20 @@ document.addEventListener("DOMContentLoaded", () => {
             </a>
           </li>
         `;
-  
-        if (!searching && p.categoria === "decoracoes" && decorList) {
+
+        if (isDecor) {
+          decorCount += 1;
           decorList.insertAdjacentHTML("beforeend", card);
         } else {
+          allCount += 1;
           allList.insertAdjacentHTML("beforeend", card);
         }
-      });
-  
+
+        if (limitActive && allCount >= allLimit && (!decorList || decorCount >= decorLimit)) {
+          break;
+        }
+      }
+
       if (carouselDecor) {
         carouselDecor.style.display = searching ? "none" : "block";
       }
@@ -709,13 +770,15 @@ document.addEventListener("DOMContentLoaded", () => {
   
     searchInput?.addEventListener("input", () => {
       const term = normalize(searchInput.value);
-  
+
       if (!term) {
         renderHome(products);
+        scheduleHomeFullRender();
         if (!isSearchFocused) setHeroHidden(false);
         return;
       }
-  
+
+      cancelHomeRender();
       const filtered = products.filter((p) => {
         const text = normalize(
           p.nome +
