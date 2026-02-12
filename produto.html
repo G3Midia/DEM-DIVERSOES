@@ -45,11 +45,16 @@
     <!-- ================= NAV ================= -->
   <header class="site-header">
     <nav class="site-nav">
-      <a class="nav-logo" href="index.html" aria-label="D&M Diversões">
+      <a class="nav-logo" href="index.html#inicio" aria-label="D&M Diversões">
         <img
           src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
           alt="Logo da empresa"
         />
+      </a>
+
+      <a href="checkout.html" class="nav-cart nav-cart-mobile" aria-label="Carrinho">
+        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+        <span class="cart-badge" data-cart-badge>0</span>
       </a>
 
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
@@ -63,6 +68,12 @@
         <li><a href="index.html#itens">Itens disponíveis</a></li>
         <li><a href="index.html#faq">FAQ</a></li>
         <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
+        <li>
+          <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
+            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+            <span class="cart-badge" data-cart-badge>0</span>
+          </a>
+        </li>
       </ul>
     </nav>
   </header>
@@ -149,14 +160,28 @@
         <!-- Descrição -->
       </p>
 
-      <a
-        id="product-whatsapp"
-        href="#"
-        target="_blank"
-        class="product-button"
-      >
-        Entrar em contato no WhatsApp
-      </a>
+      <div class="product-actions">
+        <button id="product-add-cart" type="button" class="product-button">
+          Adicionar ao carrinho
+        </button>
+
+        <a
+          id="product-checkout"
+          href="checkout.html"
+          class="product-button product-button-secondary"
+        >
+          Finalizar pedido
+        </a>
+
+        <a
+          id="product-whatsapp"
+          href="#"
+          target="_blank"
+          class="product-button product-button-secondary"
+        >
+          Entrar em contato no WhatsApp
+        </a>
+      </div>
 
     </section>
 
@@ -219,6 +244,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
 
   <!-- JS principal -->
+  <script src="cart.js"></script>
   <script src="script.js"></script>
 
   <div id="image-lightbox" class="image-lightbox" aria-hidden="true">

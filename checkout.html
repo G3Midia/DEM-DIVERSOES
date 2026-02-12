@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finalizar pedido | D&M Diversões</title>
+
+  <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
+  <link rel="stylesheet" href="style.css" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav">
+      <a class="nav-logo" href="index.html#inicio" aria-label="D&M Diversões">
+        <img
+          src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+          alt="Logo da empresa"
+        />
+      </a>
+
+      <a href="checkout.html" class="nav-cart nav-cart-mobile" aria-label="Carrinho">
+        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+        <span class="cart-badge" data-cart-badge>0</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+        <span class="nav-toggle-bar"></span>
+      </button>
+
+      <ul class="nav-menu" id="nav-menu">
+        <li><a href="index.html">Voltar ao início</a></li>
+        <li><a href="index.html#itens">Itens disponíveis</a></li>
+        <li><a href="index.html#faq">FAQ</a></li>
+        <li><a href="https://wa.me/5569992329825" target="_blank" rel="noopener">Fale conosco</a></li>
+        <li>
+          <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
+            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+            <span class="cart-badge" data-cart-badge>0</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="checkout">
+    <section class="checkout-card">
+      <div class="checkout-header">
+        <h1>Finalizar pedido</h1>
+        <p>Preencha os dados para continuarmos no WhatsApp.</p>
+      </div>
+
+      <div id="checkout-cart" class="checkout-cart">
+        <div id="checkout-items" class="checkout-items"></div>
+
+        <div class="checkout-toolbar">
+          <button type="button" id="checkout-clear" class="checkout-clear">
+            Limpar carrinho
+          </button>
+        </div>
+      </div>
+
+      <p id="checkout-empty" class="checkout-empty">
+        Nenhum item foi selecionado. Se quiser, descreva o que precisa no formulário abaixo.
+      </p>
+
+      <form id="checkout-form" class="checkout-form">
+        <div class="checkout-field">
+          <label for="checkout-name">Seu nome</label>
+          <input id="checkout-name" name="name" type="text" placeholder="Ex: Ana Souza" />
+        </div>
+
+        <div class="checkout-field">
+          <label for="checkout-date">Data do evento</label>
+          <input id="checkout-date" name="date" type="date" />
+        </div>
+
+        <div class="checkout-field">
+          <label for="checkout-location">Local/bairro</label>
+          <input id="checkout-location" name="location" type="text" placeholder="Ex: Centro" />
+        </div>
+
+        <div class="checkout-field">
+          <label for="checkout-notes">Observações</label>
+          <textarea
+            id="checkout-notes"
+            name="notes"
+            rows="4"
+            placeholder="Quantidade, horário, observações..."
+          ></textarea>
+        </div>
+
+        <div class="checkout-actions">
+          <button type="submit" class="button">
+            <i class="fab fa-whatsapp"></i>
+            Fazer orçamento
+          </button>
+        </div>
+      </form>
+
+      <p class="checkout-note">
+        Se preferir, fale direto no WhatsApp:
+        <a class="checkout-link" href="https://wa.me/5569992329825" target="_blank" rel="noopener">clique aqui</a>.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-top">
+      <img
+        src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+        alt="Logo da empresa"
+        class="footer-client-logo"
+      />
+
+      <div class="footer-social">
+        <a href="https://wa.me/5569992329825" target="_blank" rel="noopener" aria-label="WhatsApp">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+
+        <a href="https://www.facebook.com/profile.php?id=100070061812267#" target="_blank" rel="noopener" aria-label="Facebook">
+          <i class="fab fa-facebook-f"></i>
+        </a>
+
+        <a href="https://instagram.com/dem_diversoes" target="_blank" rel="noopener" aria-label="Instagram">
+          <i class="fab fa-instagram"></i>
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>
+        © <span id="year"></span> Todos os direitos reservados
+      </span>
+
+      <span class="footer-dev">
+        Site desenvolvido por
+        <a href="https://wa.me/5569993053507" target="_blank" rel="noopener">
+          <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767966176/Horizontal_Red_ai5o98.svg" alt="Sua marca">
+        </a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="cart.js"></script>
+  <script src="checkout.js"></script>
+</body>
+</html>

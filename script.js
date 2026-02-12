@@ -112,6 +112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const CLOUDINARY_MARKER = "/image/upload/";
     const META_BRAND = "D&M Diversões";
     const PRICE_CURRENCY = "BRL";
+    const CHECKOUT_PAGE = "checkout.html";
     const HOME_INITIAL_LIMIT = 18;
     const HOME_DEFER_FULL_RENDER = true;
     const IMAGE_SIZES = {
@@ -450,6 +451,8 @@ document.addEventListener("DOMContentLoaded", () => {
       HOME_INITIAL_LIMIT > 0 && (!HOME_DEFER_FULL_RENDER || !homeRenderedAll);
   
     /* ================= FETCH ================= */
+    window.Cart?.updateBadge?.();
+
     fetch(sheetUrl)
       .then((res) => res.json())
       .then((data) => {
@@ -546,6 +549,33 @@ document.addEventListener("DOMContentLoaded", () => {
               `https://wa.me/5569992329825?text=${encodeURIComponent(
                 mensagemWhatsapp
               )}`;
+
+            const checkoutLink = document.getElementById("product-checkout");
+            if (checkoutLink) {
+              const checkoutParams = new URLSearchParams();
+              checkoutParams.set("item", product.nome);
+              checkoutParams.set("id", product.id);
+              if (product.preco) checkoutParams.set("preco", product.preco);
+              checkoutLink.href = `${CHECKOUT_PAGE}?${checkoutParams.toString()}`;
+            }
+
+            const addToCartBtn = document.getElementById("product-add-cart");
+            if (addToCartBtn && window.Cart) {
+              addToCartBtn.addEventListener("click", () => {
+                window.Cart.addItem({
+                  id: product.id,
+                  nome: product.nome,
+                  preco: product.preco,
+                });
+                window.Cart.updateBadge();
+                addToCartBtn.classList.add("is-added");
+                addToCartBtn.textContent = "Adicionado!";
+                window.setTimeout(() => {
+                  addToCartBtn.classList.remove("is-added");
+                  addToCartBtn.textContent = "Adicionar ao carrinho";
+                }, 1200);
+              });
+            }
           }
         });
   
@@ -644,13 +674,29 @@ document.addEventListener("DOMContentLoaded", () => {
         const cardImage = formatImageUrl(p.imagens[0], "card");
         const card = `
           <li class="splide__slide">
-            <a href="produto.html?id=${p.id}" class="product-card" data-product-id="${p.id}">
-              <img src="${cardImage}" alt="${p.nome}">
+            <div class="product-card" data-product-id="${p.id}">
+              <a href="produto.html?id=${p.id}" class="product-card-link">
+                <img src="${cardImage}" alt="${p.nome}">
+              </a>
               <div class="product-card-content">
-                <h3>${p.nome}</h3>
-                <span>${p.preco}</span>
+                <a href="produto.html?id=${p.id}" class="product-card-text">
+                  <h3>${p.nome}</h3>
+                  <span>${p.preco}</span>
+                </a>
+                <button
+                  type="button"
+                  class="product-card-cart"
+                  data-cart-add
+                  data-id="${p.id}"
+                  data-name="${p.nome}"
+                  data-price="${p.preco}"
+                  aria-label="Adicionar ao carrinho"
+                >
+                  <span class="product-card-cart-plus">+</span>
+                  <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                </button>
               </div>
-            </a>
+            </div>
           </li>
         `;
 
@@ -760,13 +806,29 @@ document.addEventListener("DOMContentLoaded", () => {
           "beforeend",
           `
           <li class="splide__slide">
-            <a href="produto.html?id=${p.id}" class="product-card" data-product-id="${p.id}">
-              <img src="${cardImage}" alt="${p.nome}">
+            <div class="product-card" data-product-id="${p.id}">
+              <a href="produto.html?id=${p.id}" class="product-card-link">
+                <img src="${cardImage}" alt="${p.nome}">
+              </a>
               <div class="product-card-content">
-                <h3>${p.nome}</h3>
-                <span>${p.preco}</span>
+                <a href="produto.html?id=${p.id}" class="product-card-text">
+                  <h3>${p.nome}</h3>
+                  <span>${p.preco}</span>
+                </a>
+                <button
+                  type="button"
+                  class="product-card-cart"
+                  data-cart-add
+                  data-id="${p.id}"
+                  data-name="${p.nome}"
+                  data-price="${p.preco}"
+                  aria-label="Adicionar ao carrinho"
+                >
+                  <span class="product-card-cart-plus">+</span>
+                  <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                </button>
               </div>
-            </a>
+            </div>
           </li>
           `
         );
@@ -862,6 +924,24 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   
     document.addEventListener("click", (event) => {
+      const cartButton = event.target.closest("[data-cart-add]");
+      if (cartButton && window.Cart) {
+        event.preventDefault();
+        event.stopPropagation();
+        const { id, name, price } = cartButton.dataset;
+        window.Cart.addItem({
+          id,
+          nome: name,
+          preco: price,
+        });
+        window.Cart.updateBadge();
+        cartButton.classList.add("is-added");
+        window.setTimeout(() => {
+          cartButton.classList.remove("is-added");
+        }, 900);
+        return;
+      }
+
       const contactLink = event.target.closest("a[href]");
       if (!contactLink) return;
       const href = contactLink.getAttribute("href") || "";

@@ -47,7 +47,7 @@
 
 </head>
 
-<body>
+<body id="inicio">
   <noscript><img height="1" width="1" style="display:none"
     src="https://www.facebook.com/tr?id=781577447570930&ev=PageView&noscript=1"
   /></noscript>
@@ -55,11 +55,16 @@
   <!-- ================= NAV ================= -->
   <header class="site-header">
     <nav class="site-nav">
-      <a class="nav-logo" href="index.html" aria-label="D&M Diversões">
+      <a class="nav-logo" href="index.html#inicio" aria-label="D&M Diversões">
         <img
           src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
           alt="Logo da empresa"
         />
+      </a>
+
+      <a href="checkout.html" class="nav-cart nav-cart-mobile" aria-label="Carrinho">
+        <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+        <span class="cart-badge" data-cart-badge>0</span>
       </a>
 
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-menu">
@@ -73,6 +78,12 @@
         <li><a href="#decor">Decorações</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
+        <li>
+          <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
+            <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+            <span class="cart-badge" data-cart-badge>0</span>
+          </a>
+        </li>
       </ul>
     </nav>
   </header>
@@ -234,10 +245,10 @@
 
   <!-- Splide JS -->
   <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide/dist/js/splide.min.js"></script>
 
 
   <!-- JS principal -->
+  <script src="cart.js"></script>
   <script src="script.js"></script>
 
 </body>
