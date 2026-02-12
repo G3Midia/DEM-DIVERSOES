@@ -44,7 +44,13 @@
       <textarea id="descricao" rows="4"></textarea>
 
       <label for="imagens">Imagens</label>
-      <input id="imagens" type="file" accept="image/*" multiple required />
+      <div id="image-dropzone" class="image-dropzone" tabindex="0" role="button" aria-label="Selecionar imagens do produto">
+        <i class="fa-regular fa-images" aria-hidden="true"></i>
+        <p>Arraste e solte aqui, clique para selecionar ou cole com Ctrl+V/Cmd+V.</p>
+        <span id="image-picker-hint" class="image-dropzone-hint">Nenhuma imagem selecionada.</span>
+        <input id="imagens" type="file" accept="image/*" multiple required />
+      </div>
+      <div id="image-preview-list" class="image-picker-preview" aria-live="polite"></div>
 
       <button type="submit" class="btn btn-primary">Salvar</button>
     </form>

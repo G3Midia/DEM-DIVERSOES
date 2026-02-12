@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let allProducts = [];
   let allSubcategories = [];
+  const editImagePickers = new Map();
   const SCROLL_ANCHOR_KEY = 'admin-scroll-anchor-id';
   const normalize = (value = '') =>
     String(value)
@@ -165,7 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Lógica da página Adicionar Item (novoitem.html) ---
   if (currentPage === 'novoitem.html') {
     const form = document.getElementById('product-form');
-    form?.addEventListener('submit', handleSaveProduct);
+    if (form) {
+      setupImagePicker(form);
+      form.addEventListener('submit', handleSaveProduct);
+    }
   }
 
   // --- Lógica da página Gerenciar Itens (index.html) ---
@@ -302,12 +306,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.card-list.is-editing').forEach(openCard => {
       if (openCard !== card) {
         openCard.classList.remove('is-editing');
+        destroyEditImagePicker(openCard.dataset.id);
         renderProductCard(openCard.dataset.id);
       }
     });
 
     if (isActive) {
       card.classList.remove('is-editing');
+      destroyEditImagePicker(productId);
       renderProductCard(productId);
     } else {
       const product = allProducts.find(p => String(p.id) === String(productId));
@@ -339,6 +345,258 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       .catch(err => console.error("Erro ao carregar categorias:", err));
+  }
+
+  function createImagePicker({
+    imageInput,
+    dropzone,
+    previewList,
+    hintEl,
+    emptyHint,
+    singleHint,
+    multiHint,
+    pasteTarget = null,
+    requiredWhenEmpty = false
+  }) {
+    if (!imageInput || !dropzone || !previewList || !hintEl) return null;
+
+    let selectedFiles = [];
+    let dragDepth = 0;
+    const previewUrls = [];
+
+    const clearPreviewUrls = () => {
+      while (previewUrls.length > 0) {
+        const url = previewUrls.pop();
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    const isImage = (file) => file && String(file.type || '').startsWith('image/');
+    const isSameFile = (left, right) => (
+      left.name === right.name
+      && left.size === right.size
+      && left.lastModified === right.lastModified
+    );
+
+    const updateHint = () => {
+      if (selectedFiles.length === 0) {
+        hintEl.textContent = emptyHint;
+      } else if (selectedFiles.length === 1) {
+        hintEl.textContent = singleHint;
+      } else {
+        hintEl.textContent = multiHint.replace('{count}', String(selectedFiles.length));
+      }
+    };
+
+    const syncInputFiles = () => {
+      const dataTransfer = new DataTransfer();
+      selectedFiles.forEach(file => dataTransfer.items.add(file));
+      imageInput.files = dataTransfer.files;
+      if (requiredWhenEmpty) {
+        imageInput.required = selectedFiles.length === 0;
+      }
+    };
+
+    const renderPreview = () => {
+      clearPreviewUrls();
+      if (selectedFiles.length === 0) {
+        previewList.innerHTML = '';
+        return;
+      }
+
+      previewList.innerHTML = selectedFiles.map((file, index) => {
+        const url = URL.createObjectURL(file);
+        previewUrls.push(url);
+        const safeName = file.name.replace(/"/g, '&quot;');
+
+        return `
+          <div class="preview-image-item">
+            <img src="${url}" alt="${safeName}">
+            <button type="button" class="preview-image-remove" data-index="${index}" aria-label="Remover imagem ${safeName}">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    };
+
+    const addFiles = (files) => {
+      const imageFiles = Array.from(files || []).filter(isImage);
+      if (imageFiles.length === 0) return;
+
+      imageFiles.forEach(file => {
+        const alreadyAdded = selectedFiles.some(existing => isSameFile(existing, file));
+        if (!alreadyAdded) selectedFiles.push(file);
+      });
+
+      syncInputFiles();
+      renderPreview();
+      updateHint();
+    };
+
+    const getClipboardImages = (event) => {
+      const items = Array.from(event.clipboardData?.items || []);
+      return items
+        .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter(Boolean);
+    };
+
+    const openFileDialog = () => {
+      imageInput.value = '';
+      imageInput.click();
+    };
+
+    const handleDropzoneClick = () => {
+      openFileDialog();
+    };
+
+    const handleDropzoneKeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openFileDialog();
+      }
+    };
+
+    const handleInputChange = () => {
+      addFiles(imageInput.files);
+    };
+
+    const handleDragEnter = (event) => {
+      event.preventDefault();
+      dragDepth += 1;
+      dropzone.classList.add('is-dragover');
+    };
+
+    const handleDragOver = (event) => {
+      event.preventDefault();
+      dropzone.classList.add('is-dragover');
+    };
+
+    const handleDragLeave = (event) => {
+      event.preventDefault();
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) dropzone.classList.remove('is-dragover');
+    };
+
+    const handleDrop = (event) => {
+      event.preventDefault();
+      dragDepth = 0;
+      dropzone.classList.remove('is-dragover');
+      addFiles(event.dataTransfer?.files);
+    };
+
+    const handlePaste = (event) => {
+      const clipboardImages = getClipboardImages(event);
+      if (clipboardImages.length === 0) return;
+      event.preventDefault();
+      addFiles(clipboardImages);
+    };
+
+    const handlePreviewClick = (event) => {
+      const removeButton = event.target.closest('.preview-image-remove');
+      if (!removeButton) return;
+
+      const index = Number(removeButton.dataset.index);
+      if (Number.isNaN(index) || index < 0 || index >= selectedFiles.length) return;
+
+      selectedFiles.splice(index, 1);
+      syncInputFiles();
+      renderPreview();
+      updateHint();
+    };
+
+    dropzone.addEventListener('click', handleDropzoneClick);
+    dropzone.addEventListener('keydown', handleDropzoneKeydown);
+    imageInput.addEventListener('change', handleInputChange);
+    dropzone.addEventListener('dragenter', handleDragEnter);
+    dropzone.addEventListener('dragover', handleDragOver);
+    dropzone.addEventListener('dragleave', handleDragLeave);
+    dropzone.addEventListener('drop', handleDrop);
+    previewList.addEventListener('click', handlePreviewClick);
+    if (pasteTarget) {
+      pasteTarget.addEventListener('paste', handlePaste);
+    }
+
+    updateHint();
+
+    return {
+      getFiles: () => selectedFiles.slice(),
+      clear: () => {
+        selectedFiles = [];
+        syncInputFiles();
+        renderPreview();
+        updateHint();
+      },
+      destroy: () => {
+        dropzone.removeEventListener('click', handleDropzoneClick);
+        dropzone.removeEventListener('keydown', handleDropzoneKeydown);
+        imageInput.removeEventListener('change', handleInputChange);
+        dropzone.removeEventListener('dragenter', handleDragEnter);
+        dropzone.removeEventListener('dragover', handleDragOver);
+        dropzone.removeEventListener('dragleave', handleDragLeave);
+        dropzone.removeEventListener('drop', handleDrop);
+        previewList.removeEventListener('click', handlePreviewClick);
+        if (pasteTarget) {
+          pasteTarget.removeEventListener('paste', handlePaste);
+        }
+        clearPreviewUrls();
+      }
+    };
+  }
+
+  function setupImagePicker(form) {
+    const picker = createImagePicker({
+      imageInput: form.querySelector('#imagens'),
+      dropzone: form.querySelector('#image-dropzone'),
+      previewList: form.querySelector('#image-preview-list'),
+      hintEl: form.querySelector('#image-picker-hint'),
+      emptyHint: 'Nenhuma imagem selecionada.',
+      singleHint: '1 imagem pronta para upload.',
+      multiHint: '{count} imagens prontas para upload.',
+      pasteTarget: document,
+      requiredWhenEmpty: true
+    });
+
+    if (!picker) return;
+
+    form.addEventListener('reset', () => {
+      setTimeout(() => {
+        picker.clear();
+      }, 0);
+    });
+  }
+
+  function setupEditImagePicker(productId) {
+    const productKey = String(productId);
+    destroyEditImagePicker(productKey);
+
+    const card = document.querySelector(`.card-list[data-id="${productKey}"]`);
+    if (!card) return;
+
+    const picker = createImagePicker({
+      imageInput: card.querySelector('.edit-new-images'),
+      dropzone: card.querySelector('.edit-image-dropzone'),
+      previewList: card.querySelector('.edit-image-preview'),
+      hintEl: card.querySelector('.edit-image-picker-hint'),
+      emptyHint: 'Nenhuma nova imagem selecionada.',
+      singleHint: '1 nova imagem pronta para upload.',
+      multiHint: '{count} novas imagens prontas para upload.',
+      pasteTarget: document
+    });
+
+    if (picker) {
+      editImagePickers.set(productKey, picker);
+    }
+  }
+
+  function destroyEditImagePicker(productId) {
+    const productKey = String(productId);
+    const picker = editImagePickers.get(productKey);
+    if (!picker) return;
+
+    picker.destroy();
+    editImagePickers.delete(productKey);
   }
 
   function populateSubcategories(subcategories, selected = []) {
@@ -632,6 +890,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderAllProducts(products) {
       const container = document.getElementById('products');
+      editImagePickers.forEach((picker) => picker.destroy());
+      editImagePickers.clear();
+
       if (!products || products.length === 0) {
           container.innerHTML = '<p style="text-align:center; color: var(--muted);">Nenhum item encontrado na planilha.</p>';
           return;
@@ -663,6 +924,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderProductCard(productId) {
+    destroyEditImagePicker(productId);
+
     const product = allProducts.find(p => String(p.id) === String(productId));
     if (!product) return;
 
@@ -760,7 +1023,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div>
           <label>Adicionar Novas Imagens</label>
-          <input type="file" class="edit-new-images" multiple accept="image/*">
+          <div class="image-dropzone edit-image-dropzone" tabindex="0" role="button" aria-label="Adicionar novas imagens ao item">
+            <i class="fa-regular fa-images" aria-hidden="true"></i>
+            <p>Arraste, clique para selecionar ou cole com Ctrl+V/Cmd+V.</p>
+            <span class="image-dropzone-hint edit-image-picker-hint">Nenhuma nova imagem selecionada.</span>
+            <input type="file" class="edit-new-images" multiple accept="image/*">
+          </div>
+          <div class="image-picker-preview edit-image-preview" aria-live="polite"></div>
         </div>
 
         <div class="card-footer">
@@ -775,6 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     card.insertAdjacentHTML('beforeend', panelHtml);
+    setupEditImagePicker(product.id);
   }
 
   async function handleUpdateProduct(productId) {
@@ -796,7 +1066,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const existingImages = Array.from(card.querySelectorAll('.image-item:not(.marked-for-deletion) img')).map(img => img.src);
 
     const newFilesInput = card.querySelector('.edit-new-images');
-    const newFiles = newFilesInput.files;
+    const editPicker = editImagePickers.get(String(productId));
+    const newFiles = editPicker ? editPicker.getFiles() : Array.from(newFilesInput?.files || []);
     
     // Determina o nome da pasta automaticamente
     let folderName = `${productId}-${nome.trim().replace(/\s+/g, '-')}`.replace(/[^a-zA-Z0-9À-ÿ-]/g, '');
@@ -900,6 +1171,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (result.status !== 'success') throw new Error(result.message);
 
       allProducts = allProducts.filter(p => String(p.id) !== String(productId));
+      destroyEditImagePicker(productId);
       card.remove();
       document.getElementById('global-status').textContent = `${allProducts.length} itens carregados.`;
 
