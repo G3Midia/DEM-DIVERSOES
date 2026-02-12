@@ -54,8 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const itemsEl = document.getElementById("checkout-items");
   const emptyEl = document.getElementById("checkout-empty");
   const clearBtn = document.getElementById("checkout-clear");
-  const couponInput = document.getElementById("checkout-coupon");
-  if (couponInput && couponParam) couponInput.value = couponParam;
 
   const formatDate = (value) => {
     if (!value) return "";
@@ -180,7 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const date = document.getElementById("checkout-date")?.value.trim();
     const location = document.getElementById("checkout-location")?.value.trim();
-    const coupon = document.getElementById("checkout-coupon")?.value.trim();
+    const coupon = couponParam;
     const items = cartApi ? cartApi.getItems() : [];
     const itemsText = items.length
       ? items
