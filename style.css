@@ -112,10 +112,13 @@
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: #ffffff;
+    text-decoration: none;
   }
 
   .nav-cart i {
     color: #ffffff;
+    font-size: 20px;
+    line-height: 1;
   }
 
   .nav-cart.nav-cart-mobile {
@@ -212,7 +215,6 @@
 
     .nav-cart-mobile i {
       color: #ffffff;
-      font-size: 20px;
     }
   }
   

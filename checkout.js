@@ -2,29 +2,60 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartApi = window.Cart;
   cartApi?.updateBadge?.();
 
+  const sheetUrl =
+    "https://script.google.com/macros/s/AKfycbxgMNP1sis1Ew1gRs9W76jHD43pDlY2sFHy0hwhzelHbbX1q2fswYOM5y7MHIeWlnip/exec";
+
   const params = new URLSearchParams(window.location.search);
+  const productsParam = params.get("products") || "";
+  const couponParam = (params.get("coupon") || params.get("cupom") || "").trim();
   const item = params.get("item") || "";
   const id = params.get("id") || "";
   const price = params.get("preco") || "";
 
-  if (cartApi && (item || id)) {
-    const paramId = id || item;
-    const exists = cartApi
-      .getItems()
-      .some((entry) => String(entry.id) === String(paramId));
-    if (!exists) {
-      cartApi.addItem({ id: paramId, nome: item || "Item", preco: price });
-      cartApi.updateBadge();
+  const parseProducts = (value) => {
+    if (!value) return [];
+    return value
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        const [rawId, rawQty] = entry.split(":");
+        const parsedId = String(rawId || "").trim();
+        if (!parsedId) return null;
+        const parsedQty = Number.parseInt(String(rawQty || "1"), 10);
+        return {
+          id: parsedId,
+          qty: Number.isFinite(parsedQty) && parsedQty > 0 ? parsedQty : 1,
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const fetchCatalogMap = async () => {
+    const map = new Map();
+    try {
+      const response = await fetch(sheetUrl);
+      const data = await response.json();
+      const rows = Array.isArray(data) ? data : data.data || [];
+      rows.forEach((row) => {
+        const productId = String(row.id || row.Id || row.ID || "").trim();
+        if (!productId) return;
+        const productName = String(row.nome || row.Nome || "").trim() || `Item ${productId}`;
+        const productPrice = String(row.preco || row.Preco || row.Preço || "").trim();
+        map.set(productId, { nome: productName, preco: productPrice });
+      });
+    } catch (error) {
+      console.warn("Nao foi possivel carregar catalogo para o checkout URL.", error);
     }
-    if (window.history?.replaceState) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }
+    return map;
+  };
 
   const cartEl = document.getElementById("checkout-cart");
   const itemsEl = document.getElementById("checkout-items");
   const emptyEl = document.getElementById("checkout-empty");
   const clearBtn = document.getElementById("checkout-clear");
+  const couponInput = document.getElementById("checkout-coupon");
+  if (couponInput && couponParam) couponInput.value = couponParam;
 
   const formatDate = (value) => {
     if (!value) return "";
@@ -105,7 +136,43 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCart();
   });
 
-  renderCart();
+  const syncCartFromUrl = async () => {
+    if (!cartApi) return;
+
+    const parsedProducts = parseProducts(productsParam);
+    if (parsedProducts.length > 0) {
+      const catalogMap = await fetchCatalogMap();
+      cartApi.clear();
+      parsedProducts.forEach((entry) => {
+        const catalogItem = catalogMap.get(entry.id);
+        const nome = catalogItem?.nome || `Item ${entry.id}`;
+        const preco = catalogItem?.preco || "";
+        for (let index = 0; index < entry.qty; index += 1) {
+          cartApi.addItem({ id: entry.id, nome, preco });
+        }
+      });
+      cartApi.updateBadge();
+      return;
+    }
+
+    if (item || id) {
+      const paramId = id || item;
+      const exists = cartApi
+        .getItems()
+        .some((entry) => String(entry.id) === String(paramId));
+      if (!exists) {
+        cartApi.addItem({ id: paramId, nome: item || `Item ${paramId}`, preco: price });
+      }
+      cartApi.updateBadge();
+      if (window.history?.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  };
+
+  syncCartFromUrl().finally(() => {
+    renderCart();
+  });
 
   const form = document.getElementById("checkout-form");
   form?.addEventListener("submit", (event) => {
@@ -113,6 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const date = document.getElementById("checkout-date")?.value.trim();
     const location = document.getElementById("checkout-location")?.value.trim();
+    const coupon = document.getElementById("checkout-coupon")?.value.trim();
     const items = cartApi ? cartApi.getItems() : [];
     const itemsText = items.length
       ? items
@@ -126,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let message = `Olá, quero fazer um orçamento, ${itemsText}`;
     if (date) message += `, data do evento: ${formatDate(date)}`;
     if (location) message += `, bairro: ${location}`;
+    if (coupon) message += `, cupom: ${coupon}`;
 
     const whatsappUrl = `https://wa.me/5569992329825?text=${encodeURIComponent(
       message

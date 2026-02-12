@@ -553,9 +553,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const checkoutLink = document.getElementById("product-checkout");
             if (checkoutLink) {
               const checkoutParams = new URLSearchParams();
-              checkoutParams.set("item", product.nome);
-              checkoutParams.set("id", product.id);
-              if (product.preco) checkoutParams.set("preco", product.preco);
+              checkoutParams.set("products", `${product.id}:1`);
               checkoutLink.href = `${CHECKOUT_PAGE}?${checkoutParams.toString()}`;
             }
 
