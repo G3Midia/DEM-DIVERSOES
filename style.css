@@ -1254,6 +1254,15 @@
     color: #ffffff;
   }
 
+  .footer-link-admin {
+    font-size: 12px;
+    opacity: 0.72;
+  }
+
+  .footer-link-admin:hover {
+    opacity: 1;
+  }
+
   /* ================= PÁGINA LEGAL ================= */
   .legal-page {
     max-width: 980px;
