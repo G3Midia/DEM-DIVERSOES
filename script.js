@@ -117,13 +117,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const HOME_INITIAL_LIMIT = 18;
     const HOME_DEFER_FULL_RENDER = true;
     const GOOGLE_PRODUCT_CATEGORY_MAP = {
-      brinquedos: "Toys & Games > Outdoor Play Equipment > Bounce Houses",
-      "jogos de mesa": "Toys & Games > Games > Arcade Games",
-      geleira: "Home & Garden > Kitchen & Dining > Coolers",
-      decoracoes: "Home & Garden > Decor",
+      brinquedos: "1249", // Toys & Games > Outdoor Play Equipment
+      "jogos de mesa": "6347", // Furniture > Furniture Sets > Kitchen & Dining Furniture Sets
+      geleira: "1017", // Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Coolers
+      decoracoes: "696", // Home & Garden > Decor
     };
-    const DEFAULT_GOOGLE_PRODUCT_CATEGORY =
-      "Arts & Entertainment > Party & Celebration";
+    const DEFAULT_GOOGLE_PRODUCT_CATEGORY = "5709"; // Arts & Entertainment > Party & Celebration
     const IMAGE_SIZES = {
       card: { width: 640, height: 480 },
       product: { width: 960, height: 720 },
