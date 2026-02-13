@@ -117,12 +117,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const HOME_INITIAL_LIMIT = 18;
     const HOME_DEFER_FULL_RENDER = true;
     const GOOGLE_PRODUCT_CATEGORY_MAP = {
-      brinquedos: "1249", // Toys & Games > Outdoor Play Equipment
-      "jogos de mesa": "6347", // Furniture > Furniture Sets > Kitchen & Dining Furniture Sets
-      geleira: "1017", // Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Coolers
-      decoracoes: "696", // Home & Garden > Decor
+      brinquedos: "Toys & Games > Outdoor Play Equipment",
+      "jogos de mesa": "Furniture > Furniture Sets > Kitchen & Dining Furniture Sets",
+      geleira: "Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Coolers",
+      decoracoes: "Home & Garden > Decor",
     };
-    const DEFAULT_GOOGLE_PRODUCT_CATEGORY = "5709"; // Arts & Entertainment > Party & Celebration
+    const DEFAULT_GOOGLE_PRODUCT_CATEGORY = "Arts & Entertainment > Party & Celebration";
     const IMAGE_SIZES = {
       card: { width: 640, height: 480 },
       product: { width: 960, height: 720 },
@@ -319,7 +319,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const description = stripHtml(product.descricao);
       const category = product.categoriaOriginal || product.categoria || "";
       const groupId = product.groupId ? String(product.groupId) : String(product.id);
-      const googleProductCategory = resolveGoogleProductCategory(category);
+      const googleProductCategory =
+        String(product.googleProductCategory || "").trim() ||
+        resolveGoogleProductCategory(category);
       const metaPrice =
         priceValue !== null ? priceValue : MICRODATA_FALLBACK_PRICE;
 
@@ -350,7 +352,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const metaPrice =
         priceValue !== null ? priceValue : MICRODATA_FALLBACK_PRICE;
       const groupId = product.groupId ? String(product.groupId) : String(product.id);
-      const googleProductCategory = resolveGoogleProductCategory(category);
+      const googleProductCategory =
+        String(product.googleProductCategory || "").trim() ||
+        resolveGoogleProductCategory(category);
       const url = window.location.href;
 
       setContentById("product-sku", product.id);
@@ -586,6 +590,11 @@ document.addEventListener("DOMContentLoaded", () => {
             row.grupo ||
             row.Grupo ||
             "";
+          const googleProductCategoryRaw =
+            row.google_product_category ||
+            row.googleProductCategory ||
+            row.GoogleProductCategory ||
+            "";
           const preco = row.preco || row.Preco || row.Preço || "";
           const descricao = row.descricao || row.Descricao || row.Descrição || "";
           const imagens = row.imagens || row.Imagens || "";
@@ -604,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   .map((s) => normalize(s))
                   .filter(Boolean),
             groupId: String(groupIdRaw || "").trim(),
+            googleProductCategory: String(googleProductCategoryRaw || "").trim(),
             preco: String(preco),
             descricao: String(descricao),
             imagens: imagensList.length

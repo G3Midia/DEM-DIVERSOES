@@ -1,6 +1,13 @@
 const SPREADSHEET_ID = "13nL3fx9jp84DIKGr516nteMEFPCfLvtlrzlZlVzibdA";
 const SHEET_NAME = "Página1";
 const SUBCATEGORIES_SHEET = "Subcategorias";
+const GOOGLE_PRODUCT_CATEGORY_BY_CATEGORY = {
+  brinquedos: "Toys & Games > Outdoor Play Equipment",
+  "jogos de mesa": "Furniture > Furniture Sets > Kitchen & Dining Furniture Sets",
+  geleira: "Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Coolers",
+  decoracoes: "Home & Garden > Decor",
+};
+const DEFAULT_GOOGLE_PRODUCT_CATEGORY = "Arts & Entertainment > Party & Celebration";
 
 // Função doGet para verificar se a API está online pelo navegador
 function doGet(e) {
@@ -105,6 +112,20 @@ function formatId_(id) {
   return Number.isFinite(asNumber) ? String(Math.trunc(asNumber)) : raw;
 }
 
+function normalizeCategory_(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function resolveGoogleProductCategory_(category) {
+  const key = normalizeCategory_(category);
+  if (!key) return DEFAULT_GOOGLE_PRODUCT_CATEGORY;
+  return GOOGLE_PRODUCT_CATEGORY_BY_CATEGORY[key] || DEFAULT_GOOGLE_PRODUCT_CATEGORY;
+}
+
 function saveProduct(payload) {
   if (payload === undefined) {
     // Lança um erro mais claro para execução manual no editor
@@ -155,6 +176,7 @@ function getProducts() {
       id: formatId_(String(id || "").trim()),
       nome: String(nome || "").trim(),
       categoria: String(categoria || "").trim(),
+      google_product_category: resolveGoogleProductCategory_(categoria),
       subcategorias: String(subcategorias || "")
         .split(",")
         .map((s) => s.trim())
