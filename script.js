@@ -112,9 +112,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const CLOUDINARY_MARKER = "/image/upload/";
     const META_BRAND = "D&M Diversões";
     const PRICE_CURRENCY = "BRL";
+    const MICRODATA_FALLBACK_PRICE = 1;
     const CHECKOUT_PAGE = "checkout.html";
     const HOME_INITIAL_LIMIT = 18;
     const HOME_DEFER_FULL_RENDER = true;
+    const GOOGLE_PRODUCT_CATEGORY_MAP = {
+      brinquedos: "Toys & Games > Outdoor Play Equipment > Bounce Houses",
+      "jogos de mesa": "Toys & Games > Games > Arcade Games",
+      geleira: "Home & Garden > Kitchen & Dining > Coolers",
+      decoracoes: "Home & Garden > Decor",
+    };
+    const DEFAULT_GOOGLE_PRODUCT_CATEGORY =
+      "Arts & Entertainment > Party & Celebration";
     const IMAGE_SIZES = {
       card: { width: 640, height: 480 },
       product: { width: 960, height: 720 },
@@ -218,12 +227,40 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   
     const parsePriceValue = (priceText) => {
-      if (!priceText) return null;
-      const raw = String(priceText).match(/[\d.,]+/g);
-      if (!raw) return null;
-      const normalized = raw.join("").replace(/\./g, "").replace(",", ".");
+      const text = String(priceText ?? "").trim();
+      if (!text) return null;
+      const matches =
+        text.match(/\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})|\d+(?:[.,]\d{1,2})?/g) ||
+        [];
+      if (!matches.length) return null;
+
+      const firstAmount = matches[0].replace(/\s+/g, "");
+      let normalized = firstAmount;
+      if (firstAmount.includes(",")) {
+        normalized = firstAmount.replace(/\./g, "").replace(",", ".");
+      } else {
+        const dotParts = firstAmount.split(".");
+        if (dotParts.length > 2) {
+          normalized = firstAmount.replace(/\./g, "");
+        } else if (dotParts.length === 2 && dotParts[1].length === 3) {
+          normalized = firstAmount.replace(/\./g, "");
+        }
+      }
+
       const value = Number.parseFloat(normalized);
       return Number.isFinite(value) ? value : null;
+    };
+
+    const formatPriceLabel = (value) =>
+      new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: PRICE_CURRENCY,
+      }).format(Number(value || 0));
+
+    const resolveGoogleProductCategory = (categoryValue = "") => {
+      const key = normalize(categoryValue);
+      if (!key) return DEFAULT_GOOGLE_PRODUCT_CATEGORY;
+      return GOOGLE_PRODUCT_CATEGORY_MAP[key] || DEFAULT_GOOGLE_PRODUCT_CATEGORY;
     };
 
     const stripHtml = (value = "") =>
@@ -283,6 +320,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const description = stripHtml(product.descricao);
       const category = product.categoriaOriginal || product.categoria || "";
       const groupId = product.groupId ? String(product.groupId) : String(product.id);
+      const googleProductCategory = resolveGoogleProductCategory(category);
+      const metaPrice =
+        priceValue !== null ? priceValue : MICRODATA_FALLBACK_PRICE;
 
       upsertMetaTag("og:type", "product");
       upsertMetaTag("og:title", product.nome);
@@ -293,13 +333,14 @@ document.addEventListener("DOMContentLoaded", () => {
       upsertMetaTag("product:brand", META_BRAND);
       upsertMetaTag("product:availability", "in stock");
       upsertMetaTag("product:condition", "new");
-      if (priceValue !== null) {
-        upsertMetaTag("product:price:amount", priceValue.toFixed(2));
-        upsertMetaTag("product:price:currency", PRICE_CURRENCY);
-      }
+      upsertMetaTag("product:price:amount", metaPrice.toFixed(2));
+      upsertMetaTag("product:price:currency", PRICE_CURRENCY);
       upsertMetaTag("product:retailer_item_id", product.id);
       upsertMetaTag("product:item_group_id", groupId);
       if (category) upsertMetaTag("product:category", category);
+      if (googleProductCategory) {
+        upsertMetaTag("product:google_product_category", googleProductCategory);
+      }
     };
 
     const applyProductStructuredData = (product) => {
@@ -307,7 +348,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const category = product.categoriaOriginal || product.categoria || "";
       const categoryKey = category ? normalize(category) : "";
       const priceValue = parsePriceValue(product.preco);
+      const metaPrice =
+        priceValue !== null ? priceValue : MICRODATA_FALLBACK_PRICE;
       const groupId = product.groupId ? String(product.groupId) : String(product.id);
+      const googleProductCategory = resolveGoogleProductCategory(category);
       const url = window.location.href;
 
       setContentById("product-sku", product.id);
@@ -318,9 +362,10 @@ document.addEventListener("DOMContentLoaded", () => {
       setContentById("product-group-id", groupId);
       setContentById("product-type-value", category);
       setContentById("product-custom-label-0-value", categoryKey);
+      setContentById("product-google-category-value", googleProductCategory);
       setContentById(
         "product-price-meta",
-        priceValue !== null ? priceValue.toFixed(2) : ""
+        metaPrice.toFixed(2)
       );
       setHrefById("product-availability", "https://schema.org/InStock");
 
@@ -351,6 +396,13 @@ document.addEventListener("DOMContentLoaded", () => {
           value: categoryKey,
         });
       }
+      if (googleProductCategory) {
+        additionalProperty.push({
+          "@type": "PropertyValue",
+          propertyID: "google_product_category",
+          value: googleProductCategory,
+        });
+      }
 
       upsertJsonLd("product-jsonld", {
         "@context": "https://schema.org",
@@ -363,17 +415,14 @@ document.addEventListener("DOMContentLoaded", () => {
         category: category || undefined,
         brand: { "@type": "Brand", name: META_BRAND },
         additionalProperty,
-        offers:
-          priceValue !== null
-            ? {
-                "@type": "Offer",
-                price: priceValue.toFixed(2),
-                priceCurrency: PRICE_CURRENCY,
-                itemCondition: "https://schema.org/NewCondition",
-                availability: "https://schema.org/InStock",
-                url: url,
-              }
-            : undefined,
+        offers: {
+          "@type": "Offer",
+          price: metaPrice.toFixed(2),
+          priceCurrency: PRICE_CURRENCY,
+          itemCondition: "https://schema.org/NewCondition",
+          availability: "https://schema.org/InStock",
+          url: url,
+        },
         url: url,
       });
 
@@ -575,7 +624,11 @@ document.addEventListener("DOMContentLoaded", () => {
             document.title = `${product.nome} • D&M Diversões`;
   
             document.getElementById("product-name").textContent = product.nome;
-            document.getElementById("product-price").textContent = product.preco;
+            const parsedDisplayPrice = parsePriceValue(product.preco);
+            document.getElementById("product-price").textContent =
+              parsedDisplayPrice !== null
+                ? formatPriceLabel(parsedDisplayPrice)
+                : String(product.preco || "").trim() || "Sob consulta";
             document.getElementById("product-description").innerHTML =
               product.descricao.replace(/\n/g, "<br>");
   

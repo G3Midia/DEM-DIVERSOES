@@ -90,10 +90,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const parsePriceValue = (priceText) => {
     if (cartApi?.parsePriceValue) return cartApi.parsePriceValue(priceText);
-    if (!priceText) return null;
-    const raw = String(priceText).match(/[\d.,]+/g);
-    if (!raw) return null;
-    const normalized = raw.join("").replace(/\./g, "").replace(",", ".");
+    const text = String(priceText ?? "").trim();
+    if (!text) return null;
+    const matches =
+      text.match(/\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})|\d+(?:[.,]\d{1,2})?/g) || [];
+    if (!matches.length) return null;
+
+    const firstAmount = matches[0].replace(/\s+/g, "");
+    let normalized = firstAmount;
+    if (firstAmount.includes(",")) {
+      normalized = firstAmount.replace(/\./g, "").replace(",", ".");
+    } else {
+      const dotParts = firstAmount.split(".");
+      if (dotParts.length > 2) {
+        normalized = firstAmount.replace(/\./g, "");
+      } else if (dotParts.length === 2 && dotParts[1].length === 3) {
+        normalized = firstAmount.replace(/\./g, "");
+      }
+    }
+
     const value = Number.parseFloat(normalized);
     return Number.isFinite(value) ? value : null;
   };

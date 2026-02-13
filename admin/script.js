@@ -620,13 +620,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById('status');
     const submitButton = form.querySelector('button[type="submit"]');
     const nome = form.querySelector('#nome').value.trim();
+    const preco = form.querySelector('#preco').value.trim();
 
     if (!nome) {
       statusEl.textContent = 'O nome do item é obrigatório.';
       statusEl.style.color = '#ef4444';
       return;
     }
-
     submitButton.disabled = true;
     submitButton.textContent = 'Salvando...';
     statusEl.textContent = 'Iniciando...';
@@ -663,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nome: nome,
         categoria: form.querySelector('#categoria').value,
         subcategorias: Array.from(form.querySelectorAll('input[name="subcategoria"]:checked')).map(cb => cb.value).join(', '),
-        preco: form.querySelector('#preco').value,
+        preco: preco,
         descricao: form.querySelector('#descricao').value,
         imagens: imageUrls,
       };
@@ -1065,6 +1065,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagesToDelete = Array.from(card.querySelectorAll('.image-item.marked-for-deletion img')).map(img => img.src);
     const existingImages = Array.from(card.querySelectorAll('.image-item:not(.marked-for-deletion) img')).map(img => img.src);
 
+    if (!nome) {
+      statusEl.textContent = 'O nome do item é obrigatório.';
+      return;
+    }
     const newFilesInput = card.querySelector('.edit-new-images');
     const editPicker = editImagePickers.get(String(productId));
     const newFiles = editPicker ? editPicker.getFiles() : Array.from(newFilesInput?.files || []);
