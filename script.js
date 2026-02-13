@@ -338,7 +338,10 @@ document.addEventListener("DOMContentLoaded", () => {
       upsertMetaTag("product:price:currency", PRICE_CURRENCY);
       upsertMetaTag("product:retailer_item_id", product.id);
       upsertMetaTag("product:item_group_id", groupId);
-      if (category) upsertMetaTag("product:category", category);
+      upsertMetaTag(
+        "product:category",
+        googleProductCategory || category || DEFAULT_GOOGLE_PRODUCT_CATEGORY
+      );
       if (googleProductCategory) {
         upsertMetaTag("product:google_product_category", googleProductCategory);
       }
