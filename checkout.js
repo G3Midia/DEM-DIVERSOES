@@ -54,12 +54,138 @@ document.addEventListener("DOMContentLoaded", () => {
   const itemsEl = document.getElementById("checkout-items");
   const emptyEl = document.getElementById("checkout-empty");
   const clearBtn = document.getElementById("checkout-clear");
+  const PRICE_CURRENCY = "BRL";
+  let hasTrackedViewCart = false;
+  let hasTrackedInitiateCheckout = false;
 
   const formatDate = (value) => {
     if (!value) return "";
     const [year, month, day] = value.split("-");
     if (!year || !month || !day) return value;
     return `${day}/${month}/${year}`;
+  };
+
+  const compactParams = (params = {}) => {
+    const clean = {};
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (typeof value === "string" && value.trim() === "") return;
+      if (Array.isArray(value) && value.length === 0) return;
+      if (
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        Object.keys(value).length === 0
+      ) {
+        return;
+      }
+      clean[key] = value;
+    });
+    return clean;
+  };
+
+  const trackEvent = (name, params = {}) => {
+    if (typeof window.fbq !== "function") return;
+    window.fbq("track", name, compactParams(params));
+  };
+
+  const parsePriceValue = (priceText) => {
+    if (cartApi?.parsePriceValue) return cartApi.parsePriceValue(priceText);
+    if (!priceText) return null;
+    const raw = String(priceText).match(/[\d.,]+/g);
+    if (!raw) return null;
+    const normalized = raw.join("").replace(/\./g, "").replace(",", ".");
+    const value = Number.parseFloat(normalized);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const buildCommercePayload = (entries = []) => {
+    const normalizedEntries = Array.isArray(entries) ? entries : [];
+    const contentIds = [];
+    const contents = [];
+    let numItems = 0;
+    let totalValue = 0;
+    let hasValue = false;
+
+    normalizedEntries.forEach((entry) => {
+      const entryId = String(entry?.id ?? "").trim();
+      if (!entryId) return;
+
+      const qtyRaw = Number(entry?.qty ?? 1);
+      const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1;
+      const priceValue = parsePriceValue(entry?.preco);
+
+      const contentEntry = { id: entryId, quantity };
+      if (priceValue !== null) {
+        contentEntry.item_price = priceValue;
+        totalValue += priceValue * quantity;
+        hasValue = true;
+      }
+
+      numItems += quantity;
+      contentIds.push(entryId);
+      contents.push(contentEntry);
+    });
+
+    return {
+      content_ids: contentIds.length ? contentIds : undefined,
+      contents: contents.length ? contents : undefined,
+      num_items: numItems || undefined,
+      value: hasValue ? totalValue : undefined,
+      currency: hasValue ? PRICE_CURRENCY : undefined,
+    };
+  };
+
+  const trackViewCart = (items) => {
+    if (hasTrackedViewCart || !Array.isArray(items) || !items.length) return;
+    trackEvent("ViewCart", {
+      ...buildCommercePayload(items),
+      content_type: "product",
+    });
+    hasTrackedViewCart = true;
+  };
+
+  const trackInitiateCheckout = (items) => {
+    if (
+      hasTrackedInitiateCheckout ||
+      !Array.isArray(items) ||
+      !items.length
+    ) {
+      return;
+    }
+    trackEvent("InitiateCheckout", {
+      ...buildCommercePayload(items),
+      content_type: "product",
+      source: "checkout_page",
+    });
+    hasTrackedInitiateCheckout = true;
+  };
+
+  const trackAddToCart = (entry, qty = 1) => {
+    if (!entry) return;
+    trackEvent("AddToCart", {
+      ...buildCommercePayload([{ ...entry, qty }]),
+      content_name: entry.nome,
+      content_type: "product",
+    });
+  };
+
+  const trackRemoveFromCart = (entry, qty = 1) => {
+    if (!entry) return;
+    trackEvent("RemoveFromCart", {
+      ...buildCommercePayload([{ ...entry, qty }]),
+      content_name: entry.nome,
+      content_type: "product",
+    });
+  };
+
+  const trackPurchase = (items) => {
+    trackEvent("Purchase", {
+      ...buildCommercePayload(items),
+      content_type: "product",
+      content_name: Array.isArray(items) && items.length
+        ? items.map((entry) => entry.nome).filter(Boolean).join(", ")
+        : "Checkout WhatsApp",
+    });
   };
 
   const renderCart = () => {
@@ -98,6 +224,8 @@ document.addEventListener("DOMContentLoaded", () => {
       itemsEl.appendChild(row);
     });
 
+    trackViewCart(items);
+    trackInitiateCheckout(items);
   };
 
   itemsEl?.addEventListener("click", (event) => {
@@ -112,15 +240,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!itemEntry) return;
 
     if (action === "increase") {
+      trackAddToCart(itemEntry, 1);
       cartApi.updateQty(itemId, Number(itemEntry.qty || 1) + 1);
     } else if (action === "decrease") {
       const nextQty = Number(itemEntry.qty || 1) - 1;
+      trackRemoveFromCart(itemEntry, 1);
       if (nextQty <= 0) {
         cartApi.removeItem(itemId);
       } else {
         cartApi.updateQty(itemId, nextQty);
       }
     } else if (action === "remove") {
+      trackRemoveFromCart(itemEntry, Number(itemEntry.qty || 1));
       cartApi.removeItem(itemId);
     }
 
@@ -129,6 +260,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   clearBtn?.addEventListener("click", () => {
+    const items = cartApi?.getItems?.() || [];
+    items.forEach((entry) => {
+      trackRemoveFromCart(entry, Number(entry.qty || 1));
+    });
     cartApi?.clear();
     cartApi?.updateBadge();
     renderCart();
@@ -199,6 +334,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const whatsappUrl = `https://wa.me/5569992329825?text=${encodeURIComponent(
       message
     )}`;
+    trackPurchase(items);
+    if (typeof window.fbq === "function") {
+      window.setTimeout(() => {
+        window.location.href = whatsappUrl;
+      }, 180);
+      return;
+    }
     window.location.href = whatsappUrl;
   });
 

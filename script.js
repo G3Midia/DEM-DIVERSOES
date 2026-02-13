@@ -396,6 +396,64 @@ document.addEventListener("DOMContentLoaded", () => {
         currency: value ? PRICE_CURRENCY : undefined,
       });
     };
+
+    const buildCommercePayload = (entries = []) => {
+      const normalizedEntries = Array.isArray(entries) ? entries : [];
+      const contentIds = [];
+      const contents = [];
+      let numItems = 0;
+      let totalValue = 0;
+      let hasValue = false;
+
+      normalizedEntries.forEach((entry) => {
+        const entryId = String(entry?.id ?? "").trim();
+        if (!entryId) return;
+
+        const qtyRaw = Number(entry?.qty ?? 1);
+        const quantity = Number.isFinite(qtyRaw) && qtyRaw > 0 ? qtyRaw : 1;
+        const priceValue = parsePriceValue(entry?.preco);
+
+        const contentEntry = { id: entryId, quantity };
+        if (priceValue !== null) {
+          contentEntry.item_price = priceValue;
+          totalValue += priceValue * quantity;
+          hasValue = true;
+        }
+
+        numItems += quantity;
+        contentIds.push(entryId);
+        contents.push(contentEntry);
+      });
+
+      return {
+        content_ids: contentIds.length ? contentIds : undefined,
+        contents: contents.length ? contents : undefined,
+        num_items: numItems || undefined,
+        value: hasValue ? totalValue : undefined,
+        currency: hasValue ? PRICE_CURRENCY : undefined,
+      };
+    };
+
+    const trackAddToCart = (entry, qty = 1) => {
+      if (!entry) return;
+      const payload = buildCommercePayload([{ ...entry, qty }]);
+      trackEvent("AddToCart", {
+        ...payload,
+        content_name: entry.nome,
+        content_type: "product",
+        content_category: entry.categoria,
+      });
+    };
+
+    const trackInitiateCheckout = (entries, source) => {
+      const payload = buildCommercePayload(entries);
+      if (!payload.content_ids || !payload.content_ids.length) return;
+      trackEvent("InitiateCheckout", {
+        ...payload,
+        content_type: "product",
+        source: source || undefined,
+      });
+    };
   
     const trackSearch = (term) => {
       if (!term) return;
@@ -555,15 +613,36 @@ document.addEventListener("DOMContentLoaded", () => {
               const checkoutParams = new URLSearchParams();
               checkoutParams.set("products", `${product.id}:1`);
               checkoutLink.href = `${CHECKOUT_PAGE}?${checkoutParams.toString()}`;
+              checkoutLink.addEventListener("click", () => {
+                trackInitiateCheckout(
+                  [
+                    {
+                      id: product.id,
+                      nome: product.nome,
+                      preco: product.preco,
+                      categoria: product.categoriaOriginal || product.categoria,
+                      qty: 1,
+                    },
+                  ],
+                  "product_page"
+                );
+              });
             }
 
             const addToCartBtn = document.getElementById("product-add-cart");
             if (addToCartBtn && window.Cart) {
               addToCartBtn.addEventListener("click", () => {
-                window.Cart.addItem({
+                const added = window.Cart.addItem({
                   id: product.id,
                   nome: product.nome,
                   preco: product.preco,
+                });
+                if (!added) return;
+                trackAddToCart({
+                  id: product.id,
+                  nome: product.nome,
+                  preco: product.preco,
+                  categoria: product.categoriaOriginal || product.categoria,
                 });
                 window.Cart.updateBadge();
                 addToCartBtn.classList.add("is-added");
@@ -688,6 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   data-id="${p.id}"
                   data-name="${p.nome}"
                   data-price="${p.preco}"
+                  data-category="${p.categoriaOriginal || p.categoria}"
                   aria-label="Adicionar ao carrinho"
                 >
                   <span class="product-card-cart-plus">+</span>
@@ -820,6 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
                   data-id="${p.id}"
                   data-name="${p.nome}"
                   data-price="${p.preco}"
+                  data-category="${p.categoriaOriginal || p.categoria}"
                   aria-label="Adicionar ao carrinho"
                 >
                   <span class="product-card-cart-plus">+</span>
@@ -926,11 +1007,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (cartButton && window.Cart) {
         event.preventDefault();
         event.stopPropagation();
-        const { id, name, price } = cartButton.dataset;
-        window.Cart.addItem({
+        const { id, name, price, category } = cartButton.dataset;
+        const added = window.Cart.addItem({
           id,
           nome: name,
           preco: price,
+        });
+        if (!added) return;
+        trackAddToCart({
+          id,
+          nome: name,
+          preco: price,
+          categoria: category,
         });
         window.Cart.updateBadge();
         cartButton.classList.add("is-added");
