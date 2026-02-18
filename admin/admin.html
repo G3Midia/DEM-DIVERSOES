@@ -4,6 +4,16 @@
     <meta charset="UTF-8">
     <!-- A tag viewport abaixo é crucial para a responsividade em celulares -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+      (function () {
+        try {
+          var savedTheme = localStorage.getItem("dm-theme");
+          if (savedTheme === "light" || savedTheme === "dark") {
+            document.documentElement.setAttribute("data-theme", savedTheme);
+          }
+        } catch (error) {}
+      })();
+    </script>
     <title>Admin - Adicionar Item</title>
     <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
     <link rel="stylesheet" href="style.css">
@@ -12,17 +22,44 @@
 </head>
 <body>
     <!-- Navegação -->
-    <nav class="admin-nav">
-        <div class="admin-nav-inner">
-            <div class="admin-nav-title">D&M Admin</div>
-            <div class="admin-nav-links">
-                <a href="index.html">Gerenciar Itens</a>
-                <a href="admin.html" class="is-active">Adicionar Item</a>
-                <a href="../index.html">Site público</a>
-                <a href="#" id="logout-button">Sair</a>
-            </div>
-        </div>
-    </nav>
+    <header class="admin-site-header">
+      <nav class="admin-site-nav">
+        <a class="admin-nav-logo" href="../index.html#inicio" aria-label="D&M Diversões">
+          <img
+            src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+            alt="Logo da D&M Diversões"
+          />
+        </a>
+
+        <a class="admin-nav-add-mobile is-active" href="admin.html" aria-label="Adicionar novo item">
+          <i class="fa-solid fa-plus" aria-hidden="true"></i>
+          <span>Novo item</span>
+        </a>
+
+        <button
+          class="admin-nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="admin-nav-menu"
+        >
+          <span class="admin-nav-toggle-bar"></span>
+          <span class="admin-nav-toggle-bar"></span>
+          <span class="admin-nav-toggle-bar"></span>
+        </button>
+
+        <ul class="admin-nav-menu" id="admin-nav-menu">
+          <li><a href="index.html">Gerenciar Itens</a></li>
+          <li class="admin-nav-link-add"><a class="is-active" href="admin.html">Adicionar Item</a></li>
+          <li><a href="../index.html">Site público</a></li>
+          <li>
+            <button type="button" class="admin-theme-toggle" data-theme-toggle>
+              Tema: claro
+            </button>
+          </li>
+          <li><a href="#" id="logout-button">Sair</a></li>
+        </ul>
+      </nav>
+    </header>
 
     <!-- Título -->
     <h1 class="title" style="text-align: center; margin-top: 24px;">Adicionar Novo Item</h1>
@@ -82,6 +119,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
     <!-- Script Principal -->
+    <script src="../theme.js"></script>
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>

@@ -1,9 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Luckiest+Guy&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
 
 /* =========================================
    VARIÁVEIS E RESET GLOBAL
    ========================================= */
 :root {
+  color-scheme: dark;
   --bg: #1f1f27;
   --card: #252531;
   --primary: #f0529c;
@@ -12,6 +13,75 @@
   --muted: #a9a8b3;
   --border: rgba(255, 255, 255, 0.1);
   --radius: 16px;
+  --page-bg: radial-gradient(circle at top, #1a1a20, #121216);
+  --nav-bg: rgba(18, 18, 24, 0.9);
+  --nav-border: rgba(255, 255, 255, 0.08);
+  --surface-card: rgba(34, 34, 42, 0.7);
+  --surface-card-alt: rgba(34, 34, 42, 0.5);
+  --surface-3: #1a1a20;
+  --surface-overlay: rgba(18, 18, 24, 0.75);
+  --field-bg: var(--card);
+  --field-border: rgba(255, 255, 255, 0.12);
+  --soft-bg: rgba(255, 255, 255, 0.05);
+  --soft-bg-strong: rgba(255, 255, 255, 0.08);
+  --soft-border: rgba(255, 255, 255, 0.08);
+  --dropzone-bg: rgba(30, 30, 38, 0.65);
+  --dropzone-bg-hover: rgba(30, 30, 38, 0.9);
+  --on-primary: #220d18;
+  --danger: #ef4444;
+  --danger-dark: #dc2626;
+  --on-danger: #ffffff;
+  --shadow-color: rgba(18, 18, 24, 0.35);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --bg: #eef1f8;
+    --card: #ffffff;
+    --text: #1c2230;
+    --muted: #5b6474;
+    --border: rgba(28, 34, 48, 0.14);
+    --page-bg: radial-gradient(circle at top, #f8f9fd, #eceff7);
+    --nav-bg: rgba(248, 250, 255, 0.92);
+    --nav-border: rgba(28, 34, 48, 0.14);
+    --surface-card: rgba(255, 255, 255, 0.92);
+    --surface-card-alt: rgba(255, 255, 255, 0.85);
+    --surface-3: #f5f7fc;
+    --surface-overlay: rgba(28, 34, 48, 0.12);
+    --field-bg: rgba(255, 255, 255, 0.96);
+    --field-border: rgba(28, 34, 48, 0.22);
+    --soft-bg: rgba(28, 34, 48, 0.05);
+    --soft-bg-strong: rgba(28, 34, 48, 0.08);
+    --soft-border: rgba(28, 34, 48, 0.14);
+    --dropzone-bg: rgba(237, 240, 248, 0.9);
+    --dropzone-bg-hover: rgba(229, 234, 246, 0.96);
+    --shadow-color: rgba(28, 34, 48, 0.16);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #eef1f8;
+  --card: #ffffff;
+  --text: #1c2230;
+  --muted: #5b6474;
+  --border: rgba(28, 34, 48, 0.14);
+  --page-bg: radial-gradient(circle at top, #f8f9fd, #eceff7);
+  --nav-bg: rgba(248, 250, 255, 0.92);
+  --nav-border: rgba(28, 34, 48, 0.14);
+  --surface-card: rgba(255, 255, 255, 0.92);
+  --surface-card-alt: rgba(255, 255, 255, 0.85);
+  --surface-3: #f5f7fc;
+  --surface-overlay: rgba(28, 34, 48, 0.12);
+  --field-bg: rgba(255, 255, 255, 0.96);
+  --field-border: rgba(28, 34, 48, 0.22);
+  --soft-bg: rgba(28, 34, 48, 0.05);
+  --soft-bg-strong: rgba(28, 34, 48, 0.08);
+  --soft-border: rgba(28, 34, 48, 0.14);
+  --dropzone-bg: rgba(237, 240, 248, 0.9);
+  --dropzone-bg-hover: rgba(229, 234, 246, 0.96);
+  --shadow-color: rgba(28, 34, 48, 0.16);
 }
 
 * {
@@ -21,7 +91,7 @@
 body {
   margin: 0;
   font-family: "Inter", sans-serif;
-  background: radial-gradient(circle at top, #1a1a20, #121216);
+  background: var(--page-bg);
   display: none; /* Oculta por padrão para evitar flash de conteúdo não autorizado */
   color: var(--text);
   padding: 24px 16px 60px;
@@ -30,24 +100,60 @@ body {
 /* =========================================
    NAVEGAÇÃO (COMPARTILHADA)
    ========================================= */
-.admin-nav {
+.admin-site-header {
   position: sticky;
   top: 0;
-  z-index: 10;
-  background: rgba(18, 18, 24, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 20;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
   backdrop-filter: blur(10px);
 }
 
-.admin-nav-inner {
+.admin-site-nav {
   max-width: 1200px;
   margin: 0 auto;
   padding: 12px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
+  position: relative;
+}
+
+.admin-nav-logo img {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+.admin-nav-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.admin-nav-toggle-bar {
+  width: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+}
+
+.admin-nav-menu {
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.admin-nav-add-mobile {
+  display: none;
 }
 
 /* Exceção para a página de login não ser ocultada */
@@ -55,47 +161,46 @@ body.login-page {
     display: block;
 }
 
-.admin-nav-title {
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
-
-.admin-nav-links {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.admin-nav a {
+.admin-nav-menu a,
+.admin-theme-toggle {
   text-decoration: none;
   color: var(--text);
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 2px;
+  border: 0;
+  background: transparent;
   font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
 }
 
-.admin-nav a.is-active {
-  background: var(--primary);
-  color: #220d18;
-  border-color: transparent;
+.admin-nav-menu a.is-active {
+  color: var(--primary);
+}
+
+.admin-theme-toggle {
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.admin-nav-menu a:hover,
+.admin-theme-toggle:hover {
+  opacity: 0.82;
+}
+
+.admin-theme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* =========================================
    COMPONENTES GERAIS
    ========================================= */
 .title {
-  font-family: "Luckiest Guy", cursive;
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
   font-size: clamp(24px, 4vw, 36px);
-  letter-spacing: 0.4px;
+  letter-spacing: 0.2px;
   margin: 0;
-  text-shadow:
-    -2px -2px 0 #1a1a20,
-    2px -2px 0 #1a1a20,
-    -2px 2px 0 #1a1a20,
-    2px 2px 0 #1a1a20;
 }
 
 input,
@@ -104,8 +209,8 @@ textarea {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--card);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
   color: var(--text);
   font-size: 14px;
 }
@@ -131,7 +236,7 @@ label {
 
 .btn-primary {
   background: var(--primary);
-  color: #220d18;
+  color: var(--on-primary);
 }
 
 .btn-primary:hover {
@@ -140,15 +245,38 @@ label {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--soft-bg-strong);
   color: var(--text);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--soft-border);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--muted);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--soft-border);
+}
+
+.login-theme-toggle {
+  align-self: center;
+  margin-top: -6px;
+  margin-bottom: 4px;
+  border: 1px solid var(--soft-border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-theme-toggle:hover {
+  opacity: 0.82;
+}
+
+.login-theme-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* =========================================
@@ -158,11 +286,11 @@ label {
 form#product-form {
   max-width: 600px;
   margin: 24px auto 0;
-  background: rgba(34, 34, 42, 0.7);
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
-  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
+  box-shadow: 0 14px 40px var(--shadow-color);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -187,9 +315,9 @@ form#product-form {
 }
 
 .image-dropzone {
-  border: 1px dashed rgba(255, 255, 255, 0.35);
+  border: 1px dashed var(--field-border);
   border-radius: 14px;
-  background: rgba(30, 30, 38, 0.65);
+  background: var(--dropzone-bg);
   padding: 22px 18px;
   text-align: center;
   cursor: pointer;
@@ -218,7 +346,7 @@ form#product-form {
 .image-dropzone:hover,
 .image-dropzone:focus-visible {
   border-color: var(--primary);
-  background: rgba(30, 30, 38, 0.9);
+  background: var(--dropzone-bg-hover);
   transform: translateY(-1px);
   outline: none;
 }
@@ -238,8 +366,8 @@ form#product-form {
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #1a1a20;
+  border: 1px solid var(--border);
+  background: var(--surface-3);
   aspect-ratio: 4 / 3;
 }
 
@@ -258,15 +386,15 @@ form#product-form {
   height: 28px;
   border: 0;
   border-radius: 999px;
-  background: rgba(18, 18, 24, 0.75);
-  color: #ffffff;
+  background: var(--surface-overlay);
+  color: var(--text);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
 }
 
 .preview-image-remove:hover {
-  background: #ef4444;
+  background: var(--danger);
 }
 
 .edit-image-dropzone {
@@ -305,11 +433,11 @@ form#product-form {
 form#login-form {
   width: 100%;
   max-width: 400px;
-  background: rgba(34, 34, 42, 0.7);
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 32px;
-  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
+  box-shadow: 0 14px 40px var(--shadow-color);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -405,8 +533,8 @@ header.gerente-header {
   flex: 1 1 260px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(34, 34, 42, 0.8);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
   color: var(--text);
   font-size: 15px;
 }
@@ -424,11 +552,11 @@ main#products {
 }
 
 .card {
-  background: rgba(34, 34, 42, 0.7);
+  background: var(--surface-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
-  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
+  box-shadow: 0 14px 40px var(--shadow-color);
   display: grid;
   gap: 16px;
 }
@@ -444,7 +572,7 @@ main#products {
   display: flex;
   gap: 20px;
   padding: 18px;
-  background: rgba(34, 34, 42, 0.5);
+  background: var(--surface-card-alt);
 }
 
 .card-image {
@@ -453,8 +581,8 @@ main#products {
   height: 160px;
   border-radius: 12px;
   overflow: hidden;
-  background: #1a1a20;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-3);
+  border: 1px solid var(--soft-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -537,7 +665,7 @@ main#products {
 .card-edit-panel {
   padding: 18px;
   border-top: 1px solid var(--border);
-  background: rgba(34, 34, 42, 0.7);
+  background: var(--surface-card);
   display: grid;
   gap: 16px;
 }
@@ -578,8 +706,8 @@ main#products {
 .chip-item span {
   display: inline-block;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--soft-bg);
+  border: 1px solid var(--soft-border);
   border-radius: 999px;
   font-size: 14px;
   font-weight: 500;
@@ -591,7 +719,7 @@ main#products {
 
 .chip-item input:checked + span {
   background: var(--primary);
-  color: #220d18;
+  color: var(--on-primary);
   border-color: var(--primary);
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(240, 82, 156, 0.22);
@@ -614,17 +742,17 @@ textarea {
 }
 
 .image-item {
-  background: #1a1a20;
+  background: var(--surface-3);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--soft-border);
   display: flex;
   flex-direction: column;
 }
 
 .image-item.marked-for-deletion {
   opacity: 0.6;
-  border-color: #ef4444;
+  border-color: var(--danger);
 }
 
 .image-item.marked-for-deletion .image-actions button.danger {
@@ -654,23 +782,23 @@ textarea {
   border: 0;
   border-radius: 8px;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--soft-bg-strong);
   color: var(--text);
   cursor: pointer;
   font-size: 12px;
 }
 
 .image-actions button:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--soft-bg);
 }
 
 .image-actions button.danger {
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--danger);
+  color: var(--on-danger);
 }
 
 .image-actions button.danger:hover {
-  background: #dc2626;
+  background: var(--danger-dark);
 }
 
 .card-footer {
@@ -687,24 +815,108 @@ textarea {
 }
 
 .danger {
-  background: #ef4444;
-  color: #ffffff;
-  border: 1px solid #ef4444;
+  background: var(--danger);
+  color: var(--on-danger);
+  border: 1px solid var(--danger);
 }
 
 .danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  background: var(--danger-dark);
+  border-color: var(--danger-dark);
 }
 
 @media (max-width: 768px) {
   body {
+    padding-bottom: 92px;
     padding-left: 8px;
     padding-right: 8px;
   }
 
-  .admin-nav-inner {
+  body.login-page {
+    padding-bottom: 24px;
+  }
+
+  .admin-site-header {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    border-bottom: 0;
+    border-top: 1px solid var(--nav-border);
+  }
+
+  .admin-site-nav {
+    padding: 10px 12px;
+  }
+
+  .admin-nav-logo img {
+    height: 30px;
+    max-width: 120px;
+  }
+
+  .admin-nav-add-mobile {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--soft-border);
+    background: var(--soft-bg-strong);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .admin-nav-add-mobile i {
+    font-size: 11px;
+  }
+
+  .admin-nav-add-mobile.is-active {
+    background: var(--primary);
+    color: var(--on-primary);
+    border-color: transparent;
+  }
+
+  .admin-nav-link-add {
+    display: none;
+  }
+
+  .admin-nav-toggle {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .admin-nav-menu {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    background: var(--nav-bg);
+    border-top: 1px solid var(--nav-border);
+    padding: 12px 16px 18px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .admin-nav-menu.is-open {
+    display: flex;
+  }
+
+  .admin-nav-menu a,
+  .admin-theme-toggle {
+    width: 100%;
+    text-align: left;
   }
 
   form#login-form,

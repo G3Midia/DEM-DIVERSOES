@@ -51,8 +51,8 @@
   }
 
   function closeMobileNav(toggleButton) {
-    var navMenu = toggleButton.closest(".nav-menu");
-    var navToggle = document.querySelector(".nav-toggle");
+    var navMenu = toggleButton.closest(".nav-menu, .admin-nav-menu");
+    var navToggle = document.querySelector(".nav-toggle, .admin-nav-toggle");
     if (!navMenu || !navMenu.classList.contains("is-open")) return;
     navMenu.classList.remove("is-open");
     if (navToggle) {

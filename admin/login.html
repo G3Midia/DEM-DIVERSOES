@@ -3,6 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      (function () {
+        try {
+          var savedTheme = localStorage.getItem("dm-theme");
+          if (savedTheme === "light" || savedTheme === "dark") {
+            document.documentElement.setAttribute("data-theme", savedTheme);
+          }
+        } catch (error) {}
+      })();
+    </script>
     <title>Admin Login</title>
     <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
     <link rel="stylesheet" href="style.css">
@@ -12,6 +22,9 @@
     <div class="login-container">
       <form id="login-form" novalidate>
         <h1 class="title">Admin Login</h1>
+        <button type="button" class="login-theme-toggle" data-theme-toggle>
+          Tema: claro
+        </button>
         <div id="auth-status"></div>
         <div class="form-field">
           <label for="email">Email</label>
@@ -37,6 +50,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
+    <script src="../theme.js"></script>
     <script src="config.js"></script>
     <script src="script.js"></script>
   </body>

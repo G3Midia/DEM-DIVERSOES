@@ -46,6 +46,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
+  const navToggle = document.querySelector('.admin-nav-toggle');
+  const navMenu = document.querySelector('.admin-nav-menu');
+
+  if (navToggle && navMenu) {
+    const closeNavMenu = () => {
+      navMenu.classList.remove('is-open');
+      navToggle.setAttribute('aria-expanded', 'false');
+    };
+
+    navToggle.addEventListener('click', () => {
+      const isOpen = navMenu.classList.toggle('is-open');
+      navToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    navMenu.querySelectorAll('a, button').forEach((actionEl) => {
+      actionEl.addEventListener('click', () => {
+        closeNavMenu();
+      });
+    });
+  }
 
   // Protege as páginas de admin e redireciona conforme o status do usuário
   auth.onAuthStateChanged(user => {
