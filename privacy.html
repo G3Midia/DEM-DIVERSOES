@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("dm-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+      } catch (error) {}
+    })();
+  </script>
   <title>Política de Privacidade | D&M Diversões</title>
 
   <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
@@ -58,6 +68,11 @@
         <li><a href="index.html#faq">FAQ</a></li>
         <li><a href="privacy.html">Privacidade</a></li>
         <li><a href="https://wa.me/5569992329825" target="_blank" rel="noopener">Fale conosco</a></li>
+        <li>
+          <button type="button" class="nav-theme-toggle" data-theme-toggle>
+            Tema: claro
+          </button>
+        </li>
         <li>
           <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
             <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
@@ -123,11 +138,13 @@
 
   <footer class="site-footer">
     <div class="footer-top">
-      <img
-        src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
-        alt="Logo da empresa"
-        class="footer-client-logo"
-      />
+      <a href="index.html" aria-label="Voltar para a página inicial">
+        <img
+          src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+          alt="Logo da empresa"
+          class="footer-client-logo"
+        />
+      </a>
 
       <div class="footer-social">
         <a href="https://wa.me/5569992329825" target="_blank" rel="noopener" aria-label="WhatsApp">
@@ -166,6 +183,7 @@
     </div>
   </footer>
 
+  <script src="theme.js"></script>
   <script src="cart.js"></script>
   <script src="privacy.js"></script>
 </body>

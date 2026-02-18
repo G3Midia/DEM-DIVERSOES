@@ -4,12 +4,12 @@
    VARIÁVEIS E RESET GLOBAL
    ========================================= */
 :root {
-  --bg: #0f172a;
-  --card: #111827;
-  --primary: #22c55e;
-  --primary-dark: #15803d;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
+  --bg: #1f1f27;
+  --card: #252531;
+  --primary: #f0529c;
+  --primary-dark: #b72b6b;
+  --text: #f4f4f6;
+  --muted: #a9a8b3;
   --border: rgba(255, 255, 255, 0.1);
   --radius: 16px;
 }
@@ -21,7 +21,7 @@
 body {
   margin: 0;
   font-family: "Inter", sans-serif;
-  background: radial-gradient(circle at top, #0b1222, #020617);
+  background: radial-gradient(circle at top, #1a1a20, #121216);
   display: none; /* Oculta por padrão para evitar flash de conteúdo não autorizado */
   color: var(--text);
   padding: 24px 16px 60px;
@@ -34,7 +34,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(2, 6, 23, 0.9);
+  background: rgba(18, 18, 24, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
 }
@@ -79,7 +79,7 @@ body.login-page {
 
 .admin-nav a.is-active {
   background: var(--primary);
-  color: #022c22;
+  color: #220d18;
   border-color: transparent;
 }
 
@@ -92,10 +92,10 @@ body.login-page {
   letter-spacing: 0.4px;
   margin: 0;
   text-shadow:
-    -2px -2px 0 #0b1222,
-    2px -2px 0 #0b1222,
-    -2px 2px 0 #0b1222,
-    2px 2px 0 #0b1222;
+    -2px -2px 0 #1a1a20,
+    2px -2px 0 #1a1a20,
+    -2px 2px 0 #1a1a20,
+    2px 2px 0 #1a1a20;
 }
 
 input,
@@ -131,12 +131,12 @@ label {
 
 .btn-primary {
   background: var(--primary);
-  color: #022c22;
+  color: #220d18;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(34, 197, 94, 0.3);
+  box-shadow: 0 10px 24px rgba(240, 82, 156, 0.32);
 }
 
 .btn-secondary {
@@ -158,11 +158,11 @@ label {
 form#product-form {
   max-width: 600px;
   margin: 24px auto 0;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(34, 34, 42, 0.7);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
-  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.35);
+  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -189,7 +189,7 @@ form#product-form {
 .image-dropzone {
   border: 1px dashed rgba(255, 255, 255, 0.35);
   border-radius: 14px;
-  background: rgba(11, 18, 34, 0.65);
+  background: rgba(30, 30, 38, 0.65);
   padding: 22px 18px;
   text-align: center;
   cursor: pointer;
@@ -218,14 +218,14 @@ form#product-form {
 .image-dropzone:hover,
 .image-dropzone:focus-visible {
   border-color: var(--primary);
-  background: rgba(11, 18, 34, 0.9);
+  background: rgba(30, 30, 38, 0.9);
   transform: translateY(-1px);
   outline: none;
 }
 
 .image-dropzone.is-dragover {
   border-color: var(--primary);
-  background: rgba(21, 128, 61, 0.2);
+  background: rgba(240, 82, 156, 0.22);
 }
 
 .image-picker-preview {
@@ -239,7 +239,7 @@ form#product-form {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0b1222;
+  background: #1a1a20;
   aspect-ratio: 4 / 3;
 }
 
@@ -258,7 +258,7 @@ form#product-form {
   height: 28px;
   border: 0;
   border-radius: 999px;
-  background: rgba(2, 6, 23, 0.75);
+  background: rgba(18, 18, 24, 0.75);
   color: #ffffff;
   font-size: 15px;
   line-height: 1;
@@ -305,11 +305,11 @@ form#product-form {
 form#login-form {
   width: 100%;
   max-width: 400px;
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(34, 34, 42, 0.7);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 32px;
-  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.35);
+  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -406,7 +406,7 @@ header.gerente-header {
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(34, 34, 42, 0.8);
   color: var(--text);
   font-size: 15px;
 }
@@ -424,11 +424,11 @@ main#products {
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(34, 34, 42, 0.7);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px;
-  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.35);
+  box-shadow: 0 14px 40px rgba(18, 18, 24, 0.35);
   display: grid;
   gap: 16px;
 }
@@ -444,7 +444,7 @@ main#products {
   display: flex;
   gap: 20px;
   padding: 18px;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(34, 34, 42, 0.5);
 }
 
 .card-image {
@@ -453,7 +453,7 @@ main#products {
   height: 160px;
   border-radius: 12px;
   overflow: hidden;
-  background: #0b1222;
+  background: #1a1a20;
   border: 1px solid rgba(255, 255, 255, 0.06);
   display: flex;
   align-items: center;
@@ -537,7 +537,7 @@ main#products {
 .card-edit-panel {
   padding: 18px;
   border-top: 1px solid var(--border);
-  background: rgba(15, 23, 42, 0.7);
+  background: rgba(34, 34, 42, 0.7);
   display: grid;
   gap: 16px;
 }
@@ -591,10 +591,10 @@ main#products {
 
 .chip-item input:checked + span {
   background: var(--primary);
-  color: #022c22;
+  color: #220d18;
   border-color: var(--primary);
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+  box-shadow: 0 4px 12px rgba(240, 82, 156, 0.22);
 }
 
 textarea {
@@ -614,7 +614,7 @@ textarea {
 }
 
 .image-item {
-  background: #0b1222;
+  background: #1a1a20;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -628,7 +628,7 @@ textarea {
 }
 
 .image-item.marked-for-deletion .image-actions button.danger {
-  background: var(--primary); /* Verde para "desfazer" */
+  background: var(--primary); /* Cor de destaque para "desfazer" */
 }
 
 .image-item.marked-for-deletion .image-actions button.danger:hover {

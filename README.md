@@ -9,7 +9,7 @@ No admin, as imagens sobem para Cloudinary com assinatura gerada no backend (App
 
 Fluxo de alto nivel:
 
-1. Site publico consulta produtos via `doGet` do Apps Script.
+1. Site publico consulta produtos via `doGet` do Apps Script (JSON), com opcao de feed CSV para Meta.
 2. Usuario navega, filtra, adiciona itens no carrinho (localStorage).
 3. Checkout monta mensagem e redireciona para WhatsApp.
 4. Admin autenticado no Firebase faz CRUD no catalogo via `doPost`.
@@ -166,7 +166,8 @@ Observacao atual:
 
 ## Endpoints
 
-- `doGet`: publico, retorna lista de produtos em JSON.
+- `doGet`: publico, retorna JSON de produtos por padrao.
+- `doGet?format=meta` (ou `feed=meta`, `meta-csv`, `meta_csv`): retorna feed CSV no padrao Meta Catalog.
 - `doPost`: privado, exige token Firebase e roteia por `action`.
 
 ## Acoes suportadas em `doPost`
@@ -184,6 +185,40 @@ Resposta padrao:
 
 - Sucesso: `{ "status": "success", "data": ... }`
 - Erro: `{ "status": "error", "message": "..." }`
+
+## Feed Meta CSV
+
+Endpoint:
+
+- `https://SEU_WEBAPP_URL/exec?format=meta`
+
+Campos incluidos no CSV:
+
+- `id`, `title`, `description`, `availability`, `quantity_to_sell_on_facebook`
+- `condition`, `price`, `link`, `image_link`, `additional_image_link`
+- `brand`, `google_product_category`, `product_type`, `item_group_id`
+
+Fallbacks importantes:
+
+- `price`: usa `META_FEED_DEFAULT_PRICE`; se ausente, cai para `1.00 BRL`.
+- `image_link`: usa `META_FEED_FALLBACK_IMAGE_URL` quando produto nao tem imagem.
+- `google_product_category`: resolve por mapa de categoria; se nao houver match, usa categoria padrao.
+
+## Exemplo de chamada para `doPost`
+
+```json
+{
+  "action": "getManagerData",
+  "payload": {},
+  "token": "Bearer <FIREBASE_ID_TOKEN>"
+}
+```
+
+Observacoes:
+
+- O token pode ser enviado em `body.token`.
+- Existe fallback para `token` na query string.
+- Resposta sempre vem no envelope `{ status, data }` ou `{ status, message }`.
 
 ## Modelo de dados na planilha
 
@@ -230,6 +265,14 @@ Defina:
   - `CLOUDINARY_API_KEY`
   - `CLOUDINARY_API_SECRET`
   - `CLOUDINARY_BASE_FOLDER` (opcional)
+  - `SITE_BASE_URL` (opcional, usado no link do feed)
+  - `FEED_CURRENCY` (opcional, padrao `BRL`)
+  - `META_FEED_AVAILABILITY` (opcional, padrao `in stock`)
+  - `META_FEED_CONDITION` (opcional, padrao `new`)
+  - `META_FEED_BRAND` (opcional)
+  - `META_FEED_FALLBACK_IMAGE_URL` (opcional)
+  - `META_FEED_DEFAULT_PRICE` (opcional)
+  - `META_FEED_DEFAULT_QUANTITY` (opcional)
 
 Deploy esperado:
 
@@ -267,6 +310,7 @@ Acessos:
 - `doGet` e publico por design (catalogo aberto).
 - `doPost` valida token Firebase (issuer, audience e expiracao).
 - Existe funcao de verificacao de assinatura JWT, mas a linha que bloqueia assinatura invalida esta comentada no momento.
+- `projectId` para validacao de token esta fixo como `dem-admin` em `admin/Código.gs`.
 - O repositorio atualmente nao ignora explicitamente `admin/config.js`; revise politica de versionamento de configuracao.
 - Use CORS e permissoes de deploy do Apps Script de forma restritiva para o necessario.
 
@@ -286,6 +330,7 @@ Acessos:
 6. Cadastro admin cria item com imagens.
 7. Edicao admin atualiza dados e imagens.
 8. Exclusao remove item da planilha (e pasta/imagens quando aplicavel).
+9. `doGet?format=meta` retorna CSV valido para ingestao no Meta Catalog.
 
 ## Licenca
 

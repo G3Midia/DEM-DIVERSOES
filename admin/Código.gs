@@ -8,9 +8,23 @@ const GOOGLE_PRODUCT_CATEGORY_BY_CATEGORY = {
   decoracoes: "Home & Garden > Decor",
 };
 const DEFAULT_GOOGLE_PRODUCT_CATEGORY = "Arts & Entertainment > Party & Celebration";
+const DEFAULT_SITE_BASE_URL = "https://dem-diversoes.vercel.app";
+const DEFAULT_FEED_CURRENCY = "BRL";
+const DEFAULT_FEED_AVAILABILITY = "in stock";
+const DEFAULT_FEED_CONDITION = "new";
+const DEFAULT_FEED_BRAND = "D&M Diversoes";
+const DEFAULT_FEED_QUANTITY = 999;
+const DEFAULT_FEED_MISSING_PRICE = 1;
 
 // Função doGet para verificar se a API está online pelo navegador
 function doGet(e) {
+  if (isMetaFeedRequest_(e)) {
+    const csv = buildMetaCsvFeed_();
+    return ContentService.createTextOutput(csv).setMimeType(
+      ContentService.MimeType.CSV
+    );
+  }
+
   const products = getProducts();
   return ContentService.createTextOutput(
     JSON.stringify(products)
@@ -189,6 +203,149 @@ function getProducts() {
         .filter(Boolean),
     }))
     .filter((item) => item.id);
+}
+
+function isMetaFeedRequest_(e) {
+  const params = (e && e.parameter) || {};
+  const format = String(params.format || params.feed || "").toLowerCase().trim();
+  return format === "meta" || format === "meta-csv" || format === "meta_csv";
+}
+
+function buildMetaCsvFeed_() {
+  const products = getProducts();
+  const baseUrl = getFeedBaseUrl_();
+  const currency = (getProp_("FEED_CURRENCY") || DEFAULT_FEED_CURRENCY)
+    .trim()
+    .toUpperCase();
+  const availability = (getProp_("META_FEED_AVAILABILITY") || DEFAULT_FEED_AVAILABILITY)
+    .trim()
+    .toLowerCase();
+  const condition = (getProp_("META_FEED_CONDITION") || DEFAULT_FEED_CONDITION)
+    .trim()
+    .toLowerCase();
+  const brand = (getProp_("META_FEED_BRAND") || DEFAULT_FEED_BRAND).trim();
+  const fallbackImage = (getProp_("META_FEED_FALLBACK_IMAGE_URL") || "").trim();
+  const defaultPriceRaw = (getProp_("META_FEED_DEFAULT_PRICE") || "").trim();
+  const configuredDefaultPrice = parsePriceNumber_(defaultPriceRaw);
+  const defaultPrice = Number.isFinite(configuredDefaultPrice)
+    ? configuredDefaultPrice
+    : DEFAULT_FEED_MISSING_PRICE;
+  const defaultQuantity = getFeedQuantity_();
+
+  const headers = [
+    "id",
+    "title",
+    "description",
+    "availability",
+    "quantity_to_sell_on_facebook",
+    "condition",
+    "price",
+    "link",
+    "image_link",
+    "additional_image_link",
+    "brand",
+    "google_product_category",
+    "product_type",
+    "item_group_id",
+  ];
+
+  const lines = [headers.map(csvEscape_).join(",")];
+  products.forEach((product) => {
+    const id = formatId_(product.id);
+    if (!id) return;
+
+    const images = Array.isArray(product.imagens) ? product.imagens : [];
+    const imageLink = images[0] || fallbackImage;
+    const additionalImages = images.slice(1).join(", ");
+    const category = String(product.categoria || "").trim();
+    const googleCategory =
+      String(product.google_product_category || "").trim() ||
+      resolveGoogleProductCategory_(category);
+
+    const row = [
+      id,
+      sanitizeFeedText_(product.nome),
+      sanitizeFeedText_(product.descricao),
+      availability || DEFAULT_FEED_AVAILABILITY,
+      defaultQuantity,
+      condition || DEFAULT_FEED_CONDITION,
+      formatMetaPrice_(product.preco, currency, defaultPrice),
+      buildProductLink_(baseUrl, id),
+      imageLink,
+      additionalImages,
+      brand || DEFAULT_FEED_BRAND,
+      googleCategory,
+      category,
+      id,
+    ];
+
+    lines.push(row.map(csvEscape_).join(","));
+  });
+
+  return lines.join("\n");
+}
+
+function getFeedBaseUrl_() {
+  const propUrl = (getProp_("SITE_BASE_URL") || "").trim();
+  const base = propUrl || DEFAULT_SITE_BASE_URL;
+  return base.replace(/\/+$/g, "");
+}
+
+function buildProductLink_(baseUrl, id) {
+  const encodedId = encodeURIComponent(String(id || "").trim());
+  return `${baseUrl}/produto.html?id=${encodedId}`;
+}
+
+function sanitizeFeedText_(value) {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parsePriceNumber_(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+
+  const matches =
+    text.match(/\d{1,3}(?:[.\s]\d{3})*(?:,\d{2})|\d+(?:[.,]\d{1,2})?/g) || [];
+  if (!matches.length) return null;
+
+  const firstAmount = matches[0].replace(/\s+/g, "");
+  let normalized = firstAmount;
+
+  if (firstAmount.indexOf(",") !== -1) {
+    normalized = firstAmount.replace(/\./g, "").replace(",", ".");
+  } else {
+    const dotParts = firstAmount.split(".");
+    if (dotParts.length > 2) {
+      normalized = firstAmount.replace(/\./g, "");
+    } else if (dotParts.length === 2 && dotParts[1].length === 3) {
+      normalized = firstAmount.replace(/\./g, "");
+    }
+  }
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatMetaPrice_(rawPrice, currency, defaultPrice) {
+  const parsed = parsePriceNumber_(rawPrice);
+  const value = parsed !== null ? parsed : defaultPrice;
+  if (!Number.isFinite(value)) return "";
+  return `${value.toFixed(2)} ${currency || DEFAULT_FEED_CURRENCY}`;
+}
+
+function getFeedQuantity_() {
+  const raw = (getProp_("META_FEED_DEFAULT_QUANTITY") || "").trim();
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return DEFAULT_FEED_QUANTITY;
+}
+
+function csvEscape_(value) {
+  const raw = String(value === undefined || value === null ? "" : value);
+  return `"${raw.replace(/"/g, '""')}"`;
 }
 
 function getManagerData() {

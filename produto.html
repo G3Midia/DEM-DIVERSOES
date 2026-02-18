@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("dm-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+      } catch (error) {}
+    })();
+  </script>
 
   <title>Produto | Catálogo</title>
   <meta property="product:google_product_category" content="Arts &amp; Entertainment &gt; Party &amp; Celebration">
@@ -70,6 +80,11 @@
         <li><a href="index.html#faq">FAQ</a></li>
         <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
         <li>
+          <button type="button" class="nav-theme-toggle" data-theme-toggle>
+            Tema: claro
+          </button>
+        </li>
+        <li>
           <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
             <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
             <span class="cart-badge" data-cart-badge>0</span>
@@ -127,6 +142,12 @@
       <meta id="product-google-category-value" itemprop="value" content="Arts &amp; Entertainment &gt; Party &amp; Celebration">
     </div>
 
+    <div id="product-loading" class="catalog-loading product-load-state" role="status" aria-live="polite" hidden>
+      <span class="catalog-loading-spinner" aria-hidden="true"></span>
+      <span data-product-loading-text>Carregando informações...</span>
+    </div>
+    <div id="product-load-error" class="catalog-error product-load-state" role="alert" hidden></div>
+
     <!-- ===== CARROSSEL DE IMAGENS ===== -->
     <section class="product-gallery">
       <div id="splide-product" class="splide">
@@ -154,6 +175,10 @@
 
     <!-- ===== INFORMAÇÕES ===== -->
     <section class="product-info">
+      <a href="index.html#itens" class="checkout-back">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        Voltar ao catálogo
+      </a>
 
       <h1 id="product-name" class="product-title" itemprop="name">
         <!-- Nome do produto -->
@@ -212,11 +237,13 @@
 <footer class="site-footer">
   <!-- PARTE SUPERIOR -->
   <div class="footer-top">
-    <img
-      src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
-      alt="Logo da empresa"
-      class="footer-client-logo"
-    />
+    <a href="index.html" aria-label="Voltar para a página inicial">
+      <img
+        src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+        alt="Logo da empresa"
+        class="footer-client-logo"
+      />
+    </a>
 
     <div class="footer-social">
       <a href="https://wa.me/5569992329825" target="_blank" aria-label="WhatsApp">
@@ -263,6 +290,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@splidejs/splide@4.1.4/dist/js/splide.min.js"></script>
 
   <!-- JS principal -->
+  <script src="theme.js"></script>
   <script src="cart.js"></script>
   <script src="script.js"></script>
 

@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function () {
+      try {
+        var savedTheme = localStorage.getItem("dm-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+      } catch (error) {}
+    })();
+  </script>
 
   <link rel="icon" href="https://res.cloudinary.com/djvploeu9/image/upload/v1767963519/ICO_ipemt2.png" type="image/png">
   <title>D&M Diversões</title>
@@ -79,6 +89,11 @@
         <li><a href="#faq">FAQ</a></li>
         <li><a href="https://wa.me/5569992329825" target="_blank">Fale conosco</a></li>
         <li>
+          <button type="button" class="nav-theme-toggle" data-theme-toggle>
+            Tema: claro
+          </button>
+        </li>
+        <li>
           <a href="checkout.html" class="nav-cart" aria-label="Carrinho">
             <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
             <span class="cart-badge" data-cart-badge>0</span>
@@ -86,35 +101,6 @@
         </li>
       </ul>
     </nav>
-  </header>
-
-  <!-- ================= HERO ================= -->
-  <header
-    class="hero"
-    style="background-image: url('https://res.cloudinary.com/djvploeu9/image/upload/v1767963355/HERO_btz991.jpg')"
-  >
-    <div class="hero-inner">
-      <div class="hero-content">
-        <img src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png" alt="Logo" class="hero-logo"/>
-        <h1>Aluguel de Artigos para Festas</h1>
-        <p>
-          Brinquedos, decorações e tudo o que você precisa para uma festa
-          inesquecível
-        </p>
-        <div class="hero-actions">
-          <a href="#search" class="hero-button">Ver itens disponíveis</a>
-          <a href="#decor" class="hero-button">Ver decorações</a>
-        </div>
-      </div>
-
-      <div class="hero-art">
-        <img
-          src="https://res.cloudinary.com/djvploeu9/image/upload/v1769008153/Explos%C3%A3o_v7pnv7.png"
-          alt="Explosao"
-          class="hero-explosion"
-        />
-      </div>
-    </div>
   </header>
 
   <!-- ================= PESQUISA ================= -->
@@ -129,11 +115,40 @@
   </div>
 </div>
 
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-art">
+        <picture class="hero-banner-wrap">
+          <source
+            media="(min-width: 769px)"
+            srcset="https://res.cloudinary.com/djvploeu9/image/upload/v1771425064/hero_desktop_h6j4xv.png"
+          />
+          <img
+            src="https://res.cloudinary.com/djvploeu9/image/upload/v1771422979/hero_vzejtc.png"
+            alt="Banner D&M Diversões"
+            class="hero-banner"
+          />
+        </picture>
+
+        <div class="hero-actions">
+          <a href="#search" class="hero-button">Ver itens disponíveis</a>
+          <a href="#decor" class="hero-button">Ver decorações</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
 
 
   <!-- ================= CARROSSEL PRINCIPAL ================= -->
   <section class="section" id="itens">
     <h2 class="section-title">Itens disponíveis</h2>
+    <div class="catalog-loading" id="catalog-loading" role="status" aria-live="polite">
+      <span class="catalog-loading-spinner" aria-hidden="true"></span>
+      <span data-loading-text>Carregando itens disponíveis...</span>
+    </div>
+    <div class="catalog-error" id="catalog-error" role="alert" hidden></div>
 
     <div id="carousel-all" class="splide">
       <div class="splide__track">
@@ -214,11 +229,13 @@
 <footer class="site-footer">
   <!-- PARTE SUPERIOR -->
   <div class="footer-top">
-    <img
-      src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
-      alt="Logo da empresa"
-      class="footer-client-logo"
-    />
+    <a href="index.html" aria-label="Voltar para a página inicial">
+      <img
+        src="https://res.cloudinary.com/djvploeu9/image/upload/v1767963360/Horizontal_2x_p9zjw3.png"
+        alt="Logo da empresa"
+        class="footer-client-logo"
+      />
+    </a>
 
     <div class="footer-social">
       <a href="https://wa.me/5569992329825" target="_blank" aria-label="WhatsApp">
@@ -266,6 +283,7 @@
 
 
   <!-- JS principal -->
+  <script src="theme.js"></script>
   <script src="cart.js"></script>
   <script src="script.js"></script>
 

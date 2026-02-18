@@ -14,6 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const allList = document.querySelector("#carousel-all .splide__list");
     const decorList = document.querySelector("#carousel-decor .splide__list");
     const relatedList = document.querySelector("#carousel-related .splide__list");
+    const catalogLoading = document.getElementById("catalog-loading");
+    const catalogError = document.getElementById("catalog-error");
+    const productLoading = document.getElementById("product-loading");
+    const productLoadError = document.getElementById("product-load-error");
   
     const carouselDecor = document.getElementById("carousel-decor");
     const searchInput = document.getElementById("searchInput");
@@ -55,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const addRevealClass = (root = document) => {
       root
         .querySelectorAll(
-          ".hero-content > *, .hero-art, .search-container, .section-title, .splide, .decor-notice, .faq-section"
+          ".hero-art, .hero-actions, .search-container, .section-title, .splide, .decor-notice, .faq-section"
         )
         .forEach((el) => {
           if (!el.classList.contains("reveal")) el.classList.add("reveal");
@@ -95,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   
     const revealHeroOnLoad = () => {
-      const heroTargets = document.querySelectorAll(".hero-content, .hero-art");
+      const heroTargets = document.querySelectorAll(".hero-art, .hero-actions");
       if (!heroTargets.length) return;
       requestAnimationFrame(() => {
         heroTargets.forEach((el) => el.classList.add("is-visible"));
@@ -255,6 +259,11 @@ document.addEventListener("DOMContentLoaded", () => {
         style: "currency",
         currency: PRICE_CURRENCY,
       }).format(Number(value || 0));
+
+    const formatCardPriceBadgeLabel = (rawPrice) => {
+      const text = String(rawPrice ?? "").trim();
+      return text || "Sob consulta";
+    };
 
     const resolveGoogleProductCategory = (categoryValue = "") => {
       const key = normalize(categoryValue);
@@ -541,6 +550,97 @@ document.addEventListener("DOMContentLoaded", () => {
       homeRenderTimer = null;
     };
 
+    const setCatalogState = (state, message = "") => {
+      if (!catalogLoading && !catalogError) return;
+
+      const loadingText = catalogLoading?.querySelector("[data-loading-text]");
+
+      if (state === "loading") {
+        if (catalogLoading) {
+          if (loadingText) {
+            loadingText.textContent = message || "Carregando itens disponíveis...";
+          }
+          catalogLoading.hidden = false;
+        }
+        if (catalogError) {
+          catalogError.hidden = true;
+          catalogError.textContent = "";
+        }
+        return;
+      }
+
+      if (state === "error") {
+        if (catalogLoading) catalogLoading.hidden = true;
+        if (catalogError) {
+          catalogError.hidden = false;
+          catalogError.textContent =
+            message ||
+            "Não foi possível carregar os itens disponíveis. Tente novamente.";
+        }
+        return;
+      }
+
+      if (state === "empty") {
+        if (catalogLoading) {
+          if (loadingText) {
+            loadingText.textContent =
+              message || "Nenhum item disponível no momento.";
+          }
+          catalogLoading.hidden = false;
+        }
+        if (catalogError) {
+          catalogError.hidden = true;
+          catalogError.textContent = "";
+        }
+        return;
+      }
+
+      if (catalogLoading) catalogLoading.hidden = true;
+      if (catalogError) {
+        catalogError.hidden = true;
+        catalogError.textContent = "";
+      }
+    };
+
+    const setProductState = (state, message = "") => {
+      if (!productLoading && !productLoadError) return;
+
+      const loadingText = productLoading?.querySelector(
+        "[data-product-loading-text]"
+      );
+
+      if (state === "loading") {
+        if (productLoading) {
+          if (loadingText) {
+            loadingText.textContent = message || "Carregando informações...";
+          }
+          productLoading.hidden = false;
+        }
+        if (productLoadError) {
+          productLoadError.hidden = true;
+          productLoadError.textContent = "";
+        }
+        return;
+      }
+
+      if (state === "error") {
+        if (productLoading) productLoading.hidden = true;
+        if (productLoadError) {
+          productLoadError.hidden = false;
+          productLoadError.textContent =
+            message ||
+            "Não foi possível carregar as informações deste produto. Tente novamente.";
+        }
+        return;
+      }
+
+      if (productLoading) productLoading.hidden = true;
+      if (productLoadError) {
+        productLoadError.hidden = true;
+        productLoadError.textContent = "";
+      }
+    };
+
     const scheduleHomeFullRender = () => {
       if (!HOME_DEFER_FULL_RENDER || HOME_INITIAL_LIMIT <= 0 || homeRenderedAll)
         return;
@@ -565,6 +665,15 @@ document.addEventListener("DOMContentLoaded", () => {
   
     /* ================= FETCH ================= */
     window.Cart?.updateBadge?.();
+    setCatalogState("loading");
+    if (productId) {
+      setProductState("loading", "Carregando informações...");
+    } else if (productLoading || productLoadError) {
+      setProductState(
+        "error",
+        "Produto não encontrado. Volte ao catálogo e escolha outro item."
+      );
+    }
 
     fetch(sheetUrl)
       .then((res) => res.json())
@@ -728,6 +837,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (allList) {
           renderHome(products);
           scheduleHomeFullRender();
+          setCatalogState(
+            products.length ? "ready" : "empty",
+            "Nenhum item disponível no momento."
+          );
         }
   
         /* ===== SPLIDE PRODUTO ===== */
@@ -781,9 +894,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (productId && currentProduct && relatedList) {
           renderRelated();
         }
+
+        if (productId) {
+          if (currentProduct) {
+            setProductState("ready");
+          } else {
+            setProductState(
+              "error",
+              "Produto não encontrado. Volte ao catálogo e escolha outro item."
+            );
+          }
+        }
       })
       .catch((err) => {
         console.error("Erro ao carregar produtos do Google Sheets:", err);
+        setCatalogState(
+          "error",
+          "Não foi possível carregar os itens disponíveis. Tente novamente em instantes."
+        );
+        if (productId) {
+          setProductState(
+            "error",
+            "Não foi possível carregar as informações deste produto. Tente novamente."
+          );
+        }
       });
   
     initReveals();
@@ -814,16 +948,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const cardImage = formatImageUrl(p.imagens[0], "card");
+        const priceBadge = formatCardPriceBadgeLabel(p.preco);
         const card = `
           <li class="splide__slide">
             <div class="product-card" data-product-id="${p.id}">
-              <a href="produto.html?id=${p.id}" class="product-card-link">
-                <img src="${cardImage}" alt="${p.nome}">
-              </a>
+              <div class="product-card-media">
+                <a href="produto.html?id=${p.id}" class="product-card-link">
+                  <img src="${cardImage}" alt="${p.nome}">
+                </a>
+                <div class="product-card-price-badge">${priceBadge}</div>
+              </div>
               <div class="product-card-content">
                 <a href="produto.html?id=${p.id}" class="product-card-text">
                   <h3>${p.nome}</h3>
-                  <span>${p.preco}</span>
                 </a>
                 <button
                   type="button"
@@ -876,17 +1013,22 @@ document.addEventListener("DOMContentLoaded", () => {
         gap: "1rem",
         pagination: false,
         perMove: 1,
-        Speed: 1000,
+        drag: true,
+        noDrag: "",
+        speed: 800,
         easing: "linear",
         lazyLoad: "nearby",
         rewind: true,
         breakpoints: {
           900: { perPage: 2 },
-      600: {
-        perPage: 1,
-        padding: { left: "1.5rem", right: "1.5rem" },
-        gap: "0.8rem",
-    }
+          600: {
+            perPage: 1,
+            focus: "center",
+            trimSpace: false,
+            dragMinThreshold: { mouse: 0, touch: 6 },
+            padding: { left: "0.9rem", right: "0.9rem" },
+            gap: "0.8rem",
+          },
         },
       }).mount();
   
@@ -898,18 +1040,22 @@ document.addEventListener("DOMContentLoaded", () => {
         gap: "1rem",
         pagination: false,
         perMove: 1,
-        Speed: 1000,
+        drag: true,
+        noDrag: "",
+        speed: 800,
         easing: "linear",
         lazyLoad: "nearby",
         rewind: true,
         breakpoints: {
           900: { perPage: 2 },
-      600: {
-        perPage: 1,
-        padding: { left: "1.5rem", right: "1.5rem" },
-        gap: "0.8rem",
-    
-    }
+          600: {
+            perPage: 1,
+            focus: "center",
+            trimSpace: false,
+            dragMinThreshold: { mouse: 0, touch: 6 },
+            padding: { left: "0.9rem", right: "0.9rem" },
+            gap: "0.8rem",
+          },
         },
         }).mount();
       }
@@ -945,18 +1091,21 @@ document.addEventListener("DOMContentLoaded", () => {
   
       related.forEach((p) => {
         const cardImage = formatImageUrl(p.imagens[0], "card");
+        const priceBadge = formatCardPriceBadgeLabel(p.preco);
         relatedList.insertAdjacentHTML(
           "beforeend",
           `
           <li class="splide__slide">
             <div class="product-card" data-product-id="${p.id}">
-              <a href="produto.html?id=${p.id}" class="product-card-link">
-                <img src="${cardImage}" alt="${p.nome}">
-              </a>
+              <div class="product-card-media">
+                <a href="produto.html?id=${p.id}" class="product-card-link">
+                  <img src="${cardImage}" alt="${p.nome}">
+                </a>
+                <div class="product-card-price-badge">${priceBadge}</div>
+              </div>
               <div class="product-card-content">
                 <a href="produto.html?id=${p.id}" class="product-card-text">
                   <h3>${p.nome}</h3>
-                  <span>${p.preco}</span>
                 </a>
                 <button
                   type="button"
@@ -1008,6 +1157,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!hero) return;
       hero.style.display = hidden ? "none" : "";
     };
+
+    const focusSearchField = () => {
+      if (!searchInput) return;
+      searchInput.focus({ preventScroll: true });
+      searchInput.select();
+    };
+
+    document.querySelectorAll('a[href="#search"]').forEach((link) => {
+      link.addEventListener("click", () => {
+        window.setTimeout(focusSearchField, 120);
+      });
+    });
   
     searchInput?.addEventListener("focus", () => {
       isSearchFocused = true;
