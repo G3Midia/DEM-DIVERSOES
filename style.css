@@ -761,6 +761,7 @@
   #carousel-decor .product-card,
   #carousel-related .product-card {
     width: 100%;
+    box-shadow: 0 6px 16px rgba(15, 18, 31, 0.16);
   }
 
   .product-card-cart {
