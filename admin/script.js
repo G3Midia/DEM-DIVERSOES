@@ -1576,10 +1576,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagesHtml = (product.imagens || []).map((img, idx) => `
       <div class="image-item">
         <img src="${img}" alt="Imagem ${idx + 1}">
-        <div class="image-actions">
+        <div class="image-corner-actions">
           <button type="button" class="btn-img-edit" title="Editar imagem"><i class="fa-solid fa-pen"></i></button>
-          <button type="button" class="btn-img-left" title="Mover para esquerda"><i class="fa-solid fa-arrow-left"></i></button>
           <button type="button" class="btn-img-delete danger" title="Remover"><i class="fa-solid fa-trash"></i></button>
+        </div>
+        <div class="image-actions">
+          <button type="button" class="btn-img-left" title="Mover para esquerda"><i class="fa-solid fa-arrow-left"></i></button>
           <button type="button" class="btn-img-right" title="Mover para direita"><i class="fa-solid fa-arrow-right"></i></button>
         </div>
       </div>

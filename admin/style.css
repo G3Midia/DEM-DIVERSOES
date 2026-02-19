@@ -399,11 +399,13 @@ form#product-form {
 
 .preview-image-edit {
   left: 8px;
+  background: #111827;
+  color: #ffffff;
 }
 
 .preview-image-edit:hover {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: #05070b;
+  color: #ffffff;
 }
 
 .preview-image-remove {
@@ -891,6 +893,7 @@ textarea {
 }
 
 .image-item {
+  position: relative;
   background: var(--surface-3);
   border-radius: 12px;
   overflow: hidden;
@@ -904,11 +907,11 @@ textarea {
   border-color: var(--danger);
 }
 
-.image-item.marked-for-deletion .image-actions button.danger {
+.image-item.marked-for-deletion .btn-img-delete {
   background: var(--primary); /* Cor de destaque para "desfazer" */
 }
 
-.image-item.marked-for-deletion .image-actions button.danger:hover {
+.image-item.marked-for-deletion .btn-img-delete:hover {
   background: var(--primary-dark);
 }
 
@@ -920,9 +923,54 @@ textarea {
   display: block;
 }
 
+.image-corner-actions {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.image-corner-actions button {
+  pointer-events: auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface-overlay);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.image-corner-actions .btn-img-edit:hover {
+  background: #05070b;
+  color: #ffffff;
+}
+
+.image-corner-actions .btn-img-edit {
+  background: #111827;
+  color: #ffffff;
+}
+
+.image-corner-actions .btn-img-delete {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.image-corner-actions .btn-img-delete:hover {
+  background: var(--danger-dark);
+}
+
 .image-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   padding: 8px;
 }
@@ -939,23 +987,6 @@ textarea {
 
 .image-actions button:hover {
   background: var(--soft-bg);
-}
-
-.image-actions .btn-img-edit {
-  background: rgba(240, 82, 156, 0.2);
-}
-
-.image-actions .btn-img-edit:hover {
-  background: rgba(240, 82, 156, 0.3);
-}
-
-.image-actions button.danger {
-  background: var(--danger);
-  color: var(--on-danger);
-}
-
-.image-actions button.danger:hover {
-  background: var(--danger-dark);
 }
 
 .card-footer {
