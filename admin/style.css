@@ -547,6 +547,30 @@ form#product-form {
   margin: 0;
 }
 
+.image-editor-controls .image-editor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-editor-controls .image-editor-toggle span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.image-editor-controls .image-editor-toggle input[type="checkbox"] {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--soft-border);
+  border-radius: 4px;
+  background: transparent;
+  appearance: auto;
+  accent-color: var(--primary);
+}
+
 .image-editor-controls output {
   font-weight: 700;
   color: var(--primary);

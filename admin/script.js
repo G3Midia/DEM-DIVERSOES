@@ -267,6 +267,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function createImageEditor() {
+    const FRAME_CONFIG = {
+      backgroundUrl: 'https://res.cloudinary.com/djvploeu9/image/upload/v1767963355/HERO_btz991.jpg',
+      logoUrl: 'https://res.cloudinary.com/djvploeu9/image/upload/v1767963368/Vetor_br0uhh.png',
+      outputWidth: 1024,
+      outputHeight: 768
+    };
     const defaults = {
       cropWidth: null,
       cropHeight: null,
@@ -275,7 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
       brightness: 0,
       contrast: 0,
       saturation: 0,
-      sharpness: 0
+      sharpness: 0,
+      backgroundEnabled: false,
+      logoEnabled: false,
+      logoSize: 15
     };
 
     const modal = document.createElement('div');
@@ -294,6 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <canvas class="image-editor-canvas" width="640" height="480"></canvas>
           </div>
           <div class="image-editor-controls">
+            <label class="image-editor-toggle">
+              <input type="checkbox" data-control="backgroundEnabled">
+              <span>Fundo (1024x768)</span>
+            </label>
+            <label class="image-editor-toggle">
+              <input type="checkbox" data-control="logoEnabled">
+              <span>Logo (2 cantos)</span>
+            </label>
             <label>
               Tamanho horizontal: <output data-output="cropWidth">-</output>
               <input type="range" data-control="cropWidth" min="1" max="100" step="1" value="100">
@@ -309,6 +326,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <label>
               Posição vertical: <output data-output="offsetY">0</output>
               <input type="range" data-control="offsetY" min="-100" max="100" step="1" value="0">
+            </label>
+            <label data-logo-only hidden>
+              Tamanho da logo: <output data-output="logoSize">15%</output>
+              <input type="range" data-control="logoSize" min="6" max="36" step="1" value="15">
             </label>
             <label>
               Brilho: <output data-output="brightness">0</output>
@@ -341,11 +362,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const applyButton = modal.querySelector('[data-action="apply"]');
     const controlsPanel = modal.querySelector('.image-editor-controls');
+    const logoOnlyControls = Array.from(modal.querySelectorAll('[data-logo-only]'));
     const controls = {
+      backgroundEnabled: modal.querySelector('[data-control="backgroundEnabled"]'),
+      logoEnabled: modal.querySelector('[data-control="logoEnabled"]'),
       cropWidth: modal.querySelector('[data-control="cropWidth"]'),
       cropHeight: modal.querySelector('[data-control="cropHeight"]'),
       offsetX: modal.querySelector('[data-control="offsetX"]'),
       offsetY: modal.querySelector('[data-control="offsetY"]'),
+      logoSize: modal.querySelector('[data-control="logoSize"]'),
       brightness: modal.querySelector('[data-control="brightness"]'),
       contrast: modal.querySelector('[data-control="contrast"]'),
       saturation: modal.querySelector('[data-control="saturation"]'),
@@ -356,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
       cropHeight: modal.querySelector('[data-output="cropHeight"]'),
       offsetX: modal.querySelector('[data-output="offsetX"]'),
       offsetY: modal.querySelector('[data-output="offsetY"]'),
+      logoSize: modal.querySelector('[data-output="logoSize"]'),
       brightness: modal.querySelector('[data-output="brightness"]'),
       contrast: modal.querySelector('[data-output="contrast"]'),
       saturation: modal.querySelector('[data-output="saturation"]'),
@@ -365,10 +391,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let sourceImage = null;
     let sourceObjectUrl = null;
     let sourceFileName = 'imagem';
-    let outputType = 'image/webp';
     let resolvePending = null;
     let settings = { ...defaults };
     let applying = false;
+    const frameAssets = {
+      background: null,
+      logo: null,
+      backgroundPromise: null,
+      logoPromise: null
+    };
 
     const revokeSourceUrl = () => {
       if (!sourceObjectUrl) return;
@@ -395,6 +426,50 @@ document.addEventListener('DOMContentLoaded', () => {
       sourceImage = null;
     };
 
+    const loadExternalImage = (url) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Falha ao carregar imagem externa: ${url}`));
+      img.src = url;
+    });
+
+    const ensureBackgroundLoaded = async () => {
+      if (frameAssets.background) return frameAssets.background;
+      if (frameAssets.backgroundPromise) return frameAssets.backgroundPromise;
+
+      frameAssets.backgroundPromise = loadExternalImage(FRAME_CONFIG.backgroundUrl)
+        .then((background) => {
+          frameAssets.background = background;
+          frameAssets.backgroundPromise = null;
+          return background;
+        })
+        .catch((error) => {
+          frameAssets.backgroundPromise = null;
+          throw error;
+        });
+
+      return frameAssets.backgroundPromise;
+    };
+
+    const ensureLogoLoaded = async () => {
+      if (frameAssets.logo) return frameAssets.logo;
+      if (frameAssets.logoPromise) return frameAssets.logoPromise;
+
+      frameAssets.logoPromise = loadExternalImage(FRAME_CONFIG.logoUrl)
+        .then((logo) => {
+          frameAssets.logo = logo;
+          frameAssets.logoPromise = null;
+          return logo;
+        })
+        .catch((error) => {
+          frameAssets.logoPromise = null;
+          throw error;
+        });
+
+      return frameAssets.logoPromise;
+    };
+
     const getSourceSize = () => {
       if (!sourceImage) return null;
       return {
@@ -415,6 +490,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const getCropRect = () => {
       const sourceSize = getSourceSize();
       if (!sourceSize) return null;
+
+      if (isCompositeMode()) {
+        return {
+          sx: 0,
+          sy: 0,
+          sw: clamp(Number(settings.cropWidth || FRAME_CONFIG.outputWidth), 1, FRAME_CONFIG.outputWidth),
+          sh: clamp(Number(settings.cropHeight || FRAME_CONFIG.outputHeight), 1, FRAME_CONFIG.outputHeight),
+          sourceWidth: FRAME_CONFIG.outputWidth,
+          sourceHeight: FRAME_CONFIG.outputHeight
+        };
+      }
 
       const cropWidth = clamp(
         Number(settings.cropWidth || sourceSize.width),
@@ -442,63 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     };
 
-    const updateOutputs = () => {
-      const cropRect = getCropRect();
-      if (cropRect) {
-        outputs.cropWidth.textContent = `${cropRect.sw}px / ${cropRect.sourceWidth}px`;
-        outputs.cropHeight.textContent = `${cropRect.sh}px / ${cropRect.sourceHeight}px`;
-      } else {
-        outputs.cropWidth.textContent = '-';
-        outputs.cropHeight.textContent = '-';
-      }
-      outputs.offsetX.textContent = String(settings.offsetX);
-      outputs.offsetY.textContent = String(settings.offsetY);
-      outputs.brightness.textContent = String(settings.brightness);
-      outputs.contrast.textContent = String(settings.contrast);
-      outputs.saturation.textContent = String(settings.saturation);
-      outputs.sharpness.textContent = `${settings.sharpness}%`;
-    };
-
-    const syncControlsFromSettings = () => {
-      const sourceSize = getSourceSize();
-      const maxCropWidth = sourceSize ? sourceSize.width : 100;
-      const maxCropHeight = sourceSize ? sourceSize.height : 100;
-
-      controls.cropWidth.min = '1';
-      controls.cropWidth.max = String(maxCropWidth);
-      controls.cropHeight.min = '1';
-      controls.cropHeight.max = String(maxCropHeight);
-
-      settings.cropWidth = clamp(Number(settings.cropWidth || maxCropWidth), 1, maxCropWidth);
-      settings.cropHeight = clamp(Number(settings.cropHeight || maxCropHeight), 1, maxCropHeight);
-
-      controls.cropWidth.value = String(settings.cropWidth);
-      controls.cropHeight.value = String(settings.cropHeight);
-      controls.offsetX.value = String(settings.offsetX);
-      controls.offsetY.value = String(settings.offsetY);
-      controls.brightness.value = String(settings.brightness);
-      controls.contrast.value = String(settings.contrast);
-      controls.saturation.value = String(settings.saturation);
-      controls.sharpness.value = String(settings.sharpness);
-      updateOutputs();
-    };
-
-    const syncSettingsFromControls = () => {
-      const sourceSize = getSourceSize();
-      const maxCropWidth = sourceSize ? sourceSize.width : 100;
-      const maxCropHeight = sourceSize ? sourceSize.height : 100;
-
-      settings.cropWidth = clamp(Number(controls.cropWidth.value), 1, maxCropWidth);
-      settings.cropHeight = clamp(Number(controls.cropHeight.value), 1, maxCropHeight);
-      settings.offsetX = clamp(Number(controls.offsetX.value), -100, 100);
-      settings.offsetY = clamp(Number(controls.offsetY.value), -100, 100);
-      settings.brightness = clamp(Number(controls.brightness.value), -100, 100);
-      settings.contrast = clamp(Number(controls.contrast.value), -100, 100);
-      settings.saturation = clamp(Number(controls.saturation.value), -100, 100);
-      settings.sharpness = clamp(Number(controls.sharpness.value), 0, 100);
-      updateOutputs();
-    };
-
     const getRenderSize = (width, height, maxDimension = 1920) => {
       if (width <= maxDimension && height <= maxDimension) {
         return { width, height };
@@ -515,7 +544,98 @@ document.addEventListener('DOMContentLoaded', () => {
       };
     };
 
-    const drawCroppedImage = (targetCtx, img, targetWidth, targetHeight) => {
+    const isCompositeMode = () => Boolean(settings.backgroundEnabled || settings.logoEnabled);
+
+    const updateControlVisibility = () => {
+      logoOnlyControls.forEach((el) => {
+        el.hidden = !settings.logoEnabled;
+      });
+    };
+
+    const updateOutputs = () => {
+      const cropRect = getCropRect();
+      const maxOutputWidth = isCompositeMode()
+        ? FRAME_CONFIG.outputWidth
+        : (cropRect ? cropRect.sourceWidth : 0);
+      const maxOutputHeight = isCompositeMode()
+        ? FRAME_CONFIG.outputHeight
+        : (cropRect ? cropRect.sourceHeight : 0);
+      if (cropRect) {
+        outputs.cropWidth.textContent = `${cropRect.sw}px / ${maxOutputWidth}px`;
+        outputs.cropHeight.textContent = `${cropRect.sh}px / ${maxOutputHeight}px`;
+      } else {
+        outputs.cropWidth.textContent = '-';
+        outputs.cropHeight.textContent = '-';
+      }
+      outputs.offsetX.textContent = String(settings.offsetX);
+      outputs.offsetY.textContent = String(settings.offsetY);
+      outputs.logoSize.textContent = `${settings.logoSize}%`;
+      outputs.brightness.textContent = String(settings.brightness);
+      outputs.contrast.textContent = String(settings.contrast);
+      outputs.saturation.textContent = String(settings.saturation);
+      outputs.sharpness.textContent = `${settings.sharpness}%`;
+    };
+
+    const syncControlsFromSettings = () => {
+      const sourceSize = getSourceSize();
+      const composite = isCompositeMode();
+      const maxCropWidth = composite
+        ? FRAME_CONFIG.outputWidth
+        : (sourceSize ? sourceSize.width : 100);
+      const maxCropHeight = composite
+        ? FRAME_CONFIG.outputHeight
+        : (sourceSize ? sourceSize.height : 100);
+
+      controls.cropWidth.min = '1';
+      controls.cropWidth.max = String(maxCropWidth);
+      controls.cropHeight.min = '1';
+      controls.cropHeight.max = String(maxCropHeight);
+
+      settings.cropWidth = clamp(Number(settings.cropWidth || maxCropWidth), 1, maxCropWidth);
+      settings.cropHeight = clamp(Number(settings.cropHeight || maxCropHeight), 1, maxCropHeight);
+      settings.logoSize = clamp(Number(settings.logoSize || 15), 6, 36);
+
+      controls.backgroundEnabled.checked = Boolean(settings.backgroundEnabled);
+      controls.logoEnabled.checked = Boolean(settings.logoEnabled);
+      controls.cropWidth.value = String(settings.cropWidth);
+      controls.cropHeight.value = String(settings.cropHeight);
+      controls.offsetX.value = String(settings.offsetX);
+      controls.offsetY.value = String(settings.offsetY);
+      controls.logoSize.value = String(settings.logoSize);
+      controls.brightness.value = String(settings.brightness);
+      controls.contrast.value = String(settings.contrast);
+      controls.saturation.value = String(settings.saturation);
+      controls.sharpness.value = String(settings.sharpness);
+      updateControlVisibility();
+      updateOutputs();
+    };
+
+    const syncSettingsFromControls = () => {
+      const sourceSize = getSourceSize();
+      settings.backgroundEnabled = Boolean(controls.backgroundEnabled.checked);
+      settings.logoEnabled = Boolean(controls.logoEnabled.checked);
+      const composite = isCompositeMode();
+      const maxCropWidth = composite
+        ? FRAME_CONFIG.outputWidth
+        : (sourceSize ? sourceSize.width : 100);
+      const maxCropHeight = composite
+        ? FRAME_CONFIG.outputHeight
+        : (sourceSize ? sourceSize.height : 100);
+
+      settings.cropWidth = clamp(Number(controls.cropWidth.value), 1, maxCropWidth);
+      settings.cropHeight = clamp(Number(controls.cropHeight.value), 1, maxCropHeight);
+      settings.offsetX = clamp(Number(controls.offsetX.value), -100, 100);
+      settings.offsetY = clamp(Number(controls.offsetY.value), -100, 100);
+      settings.logoSize = clamp(Number(controls.logoSize.value), 6, 36);
+      settings.brightness = clamp(Number(controls.brightness.value), -100, 100);
+      settings.contrast = clamp(Number(controls.contrast.value), -100, 100);
+      settings.saturation = clamp(Number(controls.saturation.value), -100, 100);
+      settings.sharpness = clamp(Number(controls.sharpness.value), 0, 100);
+      updateControlVisibility();
+      updateOutputs();
+    };
+
+    const drawCroppedImage = (targetCtx, img, destX, destY, destWidth, destHeight) => {
       const cropRect = getCropRect();
       if (!cropRect) return;
 
@@ -525,10 +645,10 @@ document.addEventListener('DOMContentLoaded', () => {
         cropRect.sy,
         cropRect.sw,
         cropRect.sh,
-        0,
-        0,
-        targetWidth,
-        targetHeight
+        destX,
+        destY,
+        destWidth,
+        destHeight
       );
     };
 
@@ -560,6 +680,106 @@ document.addEventListener('DOMContentLoaded', () => {
       targetCtx.putImageData(imageData, 0, 0);
     };
 
+    const drawProcessedPhotoLayer = (targetCtx, destX, destY, destWidth, destHeight) => {
+      const layerWidth = Math.max(1, Math.round(destWidth));
+      const layerHeight = Math.max(1, Math.round(destHeight));
+      const layerCanvas = document.createElement('canvas');
+      layerCanvas.width = layerWidth;
+      layerCanvas.height = layerHeight;
+      const layerCtx = layerCanvas.getContext('2d', { willReadFrequently: true });
+
+      layerCtx.clearRect(0, 0, layerWidth, layerHeight);
+      layerCtx.imageSmoothingEnabled = true;
+      layerCtx.imageSmoothingQuality = 'high';
+      layerCtx.filter = `brightness(${100 + settings.brightness}%) contrast(${100 + settings.contrast}%) saturate(${100 + settings.saturation}%)`;
+
+      if (isCompositeMode()) {
+        const sourceWidth = sourceImage.naturalWidth || sourceImage.width;
+        const sourceHeight = sourceImage.naturalHeight || sourceImage.height;
+        const coverScale = Math.max(layerWidth / sourceWidth, layerHeight / sourceHeight);
+        const scale = Math.max(0.01, coverScale);
+        const drawWidth = sourceWidth * scale;
+        const drawHeight = sourceHeight * scale;
+        const overflowX = Math.max(0, drawWidth - layerWidth);
+        const overflowY = Math.max(0, drawHeight - layerHeight);
+        const offsetFactorX = (settings.offsetX + 100) / 200;
+        const offsetFactorY = (settings.offsetY + 100) / 200;
+        const drawX = -(overflowX * offsetFactorX);
+        const drawY = -(overflowY * offsetFactorY);
+
+        layerCtx.drawImage(sourceImage, drawX, drawY, drawWidth, drawHeight);
+      } else {
+        drawCroppedImage(layerCtx, sourceImage, 0, 0, layerWidth, layerHeight);
+      }
+
+      layerCtx.filter = 'none';
+      applySharpen(layerCtx, layerWidth, layerHeight);
+
+      targetCtx.drawImage(layerCanvas, destX, destY, destWidth, destHeight);
+    };
+
+    const drawImageCover = (targetCtx, img, width, height) => {
+      const sourceWidth = img.naturalWidth || img.width;
+      const sourceHeight = img.naturalHeight || img.height;
+      const coverScale = Math.max(width / sourceWidth, height / sourceHeight);
+      const drawWidth = sourceWidth * coverScale;
+      const drawHeight = sourceHeight * coverScale;
+      const drawX = (width - drawWidth) / 2;
+      const drawY = (height - drawHeight) / 2;
+      targetCtx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    };
+
+    const getCompositePhotoArea = (width, height) => {
+      const normalizedWidth = clamp(
+        Number(settings.cropWidth || FRAME_CONFIG.outputWidth),
+        1,
+        FRAME_CONFIG.outputWidth
+      ) / FRAME_CONFIG.outputWidth;
+      const normalizedHeight = clamp(
+        Number(settings.cropHeight || FRAME_CONFIG.outputHeight),
+        1,
+        FRAME_CONFIG.outputHeight
+      ) / FRAME_CONFIG.outputHeight;
+      const areaWidth = Math.max(1, Math.round(width * normalizedWidth));
+      const areaHeight = Math.max(1, Math.round(height * normalizedHeight));
+      return {
+        x: Math.round((width - areaWidth) / 2),
+        y: Math.round((height - areaHeight) / 2),
+        width: areaWidth,
+        height: areaHeight
+      };
+    };
+
+    const drawFrameLogos = (targetCtx, width, height) => {
+      const logo = frameAssets.logo;
+      if (!logo) return;
+
+      const logoAspect = (logo.naturalHeight || logo.height) / (logo.naturalWidth || logo.width || 1);
+      const margin = Math.max(8, Math.round(width * 0.02));
+      let logoWidth = Math.round((width * settings.logoSize) / 100);
+      let logoHeight = Math.round(logoWidth * logoAspect);
+      const maxLogoWidth = Math.max(1, width - (margin * 2));
+      const maxLogoHeight = Math.max(1, Math.floor((height - (margin * 2)) / 2));
+
+      if (logoWidth > maxLogoWidth) {
+        logoWidth = maxLogoWidth;
+        logoHeight = Math.round(logoWidth * logoAspect);
+      }
+      if (logoHeight > maxLogoHeight) {
+        logoHeight = maxLogoHeight;
+        logoWidth = Math.round(logoHeight / logoAspect);
+      }
+
+      targetCtx.drawImage(logo, margin, margin, logoWidth, logoHeight);
+      targetCtx.drawImage(
+        logo,
+        width - margin - logoWidth,
+        height - margin - logoHeight,
+        logoWidth,
+        logoHeight
+      );
+    };
+
     const renderCanvas = (targetCanvas, targetCtx, width, height) => {
       if (!sourceImage) return;
 
@@ -568,15 +788,46 @@ document.addEventListener('DOMContentLoaded', () => {
       targetCtx.clearRect(0, 0, width, height);
       targetCtx.imageSmoothingEnabled = true;
       targetCtx.imageSmoothingQuality = 'high';
-      targetCtx.filter = `brightness(${100 + settings.brightness}%) contrast(${100 + settings.contrast}%) saturate(${100 + settings.saturation}%)`;
-      drawCroppedImage(targetCtx, sourceImage, width, height);
-      targetCtx.filter = 'none';
-      applySharpen(targetCtx, width, height);
+
+      if (isCompositeMode()) {
+        if (settings.backgroundEnabled && frameAssets.background) {
+          drawImageCover(targetCtx, frameAssets.background, width, height);
+        } else if (settings.backgroundEnabled) {
+          targetCtx.fillStyle = '#0f172a';
+          targetCtx.fillRect(0, 0, width, height);
+        }
+
+        const framePhotoArea = getCompositePhotoArea(width, height);
+        drawProcessedPhotoLayer(
+          targetCtx,
+          framePhotoArea.x,
+          framePhotoArea.y,
+          framePhotoArea.width,
+          framePhotoArea.height
+        );
+        if (settings.logoEnabled) {
+          drawFrameLogos(targetCtx, width, height);
+        }
+      } else {
+        drawProcessedPhotoLayer(targetCtx, 0, 0, width, height);
+      }
     };
 
     const renderPreview = () => {
+      if (!sourceImage) return;
+
+      if (isCompositeMode()) {
+        const previewBounds = getRenderSize(
+          FRAME_CONFIG.outputWidth,
+          FRAME_CONFIG.outputHeight,
+          760
+        );
+        renderCanvas(canvas, ctx, previewBounds.width, previewBounds.height);
+        return;
+      }
+
       const cropRect = getCropRect();
-      if (!sourceImage || !cropRect) return;
+      if (!cropRect) return;
       const previewBounds = getRenderSize(cropRect.sw, cropRect.sh, 760);
       renderCanvas(canvas, ctx, previewBounds.width, previewBounds.height);
     };
@@ -604,15 +855,99 @@ document.addEventListener('DOMContentLoaded', () => {
       }, mimeType, quality);
     });
 
-    const controlInputs = Object.values(controls).filter(Boolean);
-    controlInputs.forEach((input) => {
-      input.addEventListener('input', () => {
-        syncSettingsFromControls();
-        renderPreview();
-      });
+    const compressCanvasToWebP150k = async (targetCanvas) => {
+      const maxBytes = 150 * 1024;
+      let quality = 0.92;
+      let blob = await canvasToBlob(targetCanvas, 'image/webp', quality);
+      while (blob.size > maxBytes && quality > 0.05) {
+        quality -= 0.06;
+        blob = await canvasToBlob(targetCanvas, 'image/webp', quality);
+      }
+      while (blob.size > maxBytes && quality > 0.01) {
+        quality -= 0.01;
+        blob = await canvasToBlob(targetCanvas, 'image/webp', quality);
+      }
+      if (blob.size > maxBytes) {
+        throw new Error('Não foi possível reduzir a imagem para 150KB em WebP.');
+      }
+      return blob;
+    };
+
+    const buildEditedFile = async (targetCanvas) => {
+      const blob = await compressCanvasToWebP150k(targetCanvas);
+      return {
+        blob,
+        mimeType: 'image/webp',
+        extension: 'webp'
+      };
+    };
+
+    controls.cropWidth?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.cropHeight?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.offsetX?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.offsetY?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.logoSize?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.brightness?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.contrast?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.saturation?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.sharpness?.addEventListener('input', () => {
+      syncSettingsFromControls();
+      renderPreview();
+    });
+    controls.backgroundEnabled?.addEventListener('change', async () => {
+      syncSettingsFromControls();
+      if (settings.backgroundEnabled) {
+        try {
+          await ensureBackgroundLoaded();
+        } catch (error) {
+          console.error('Erro ao carregar moldura/logo:', error);
+          alert('Não foi possível carregar a imagem de fundo.');
+          settings.backgroundEnabled = false;
+          syncControlsFromSettings();
+        }
+      }
+      renderPreview();
+    });
+    controls.logoEnabled?.addEventListener('change', async () => {
+      syncSettingsFromControls();
+      if (settings.logoEnabled) {
+        try {
+          await ensureLogoLoaded();
+        } catch (error) {
+          console.error('Erro ao carregar logo:', error);
+          alert('Não foi possível carregar a logo.');
+          settings.logoEnabled = false;
+          syncControlsFromSettings();
+        }
+      }
+      renderPreview();
     });
 
-    modal.addEventListener('click', (event) => {
+    modal.addEventListener('click', async (event) => {
       const actionEl = event.target.closest('[data-action]');
       if (actionEl) {
         const action = actionEl.dataset.action;
@@ -631,41 +966,45 @@ document.addEventListener('DOMContentLoaded', () => {
           applying = true;
           applyButton.disabled = true;
 
-          const cropRect = getCropRect();
-          if (!cropRect) {
-            alert('Não foi possível calcular o recorte da imagem.');
+          try {
+            const cropRect = getCropRect();
+            if (!cropRect) {
+              throw new Error('Não foi possível calcular o recorte da imagem.');
+            }
+
+            if (settings.backgroundEnabled) {
+              await ensureBackgroundLoaded();
+            }
+            if (settings.logoEnabled) {
+              await ensureLogoLoaded();
+            }
+
+            const outputBounds = isCompositeMode()
+              ? {
+                width: FRAME_CONFIG.outputWidth,
+                height: FRAME_CONFIG.outputHeight
+              }
+              : getRenderSize(cropRect.sw, cropRect.sh, 1920);
+
+            const outputCanvas = document.createElement('canvas');
+            const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true });
+            renderCanvas(outputCanvas, outputCtx, outputBounds.width, outputBounds.height);
+
+            const editedResult = await buildEditedFile(outputCanvas);
+            const cleanName = sourceFileName.replace(/\.[^/.]+$/, '') || 'imagem';
+            const editedFile = new File(
+              [editedResult.blob],
+              `${cleanName}-editada.${editedResult.extension}`,
+              { type: editedResult.mimeType, lastModified: Date.now() }
+            );
+
+            close(editedFile);
+          } catch (error) {
+            console.error('Erro ao aplicar edição:', error);
+            alert(`Erro ao aplicar edição: ${error.message}`);
             applying = false;
             applyButton.disabled = false;
-            return;
           }
-
-          const outputBounds = getRenderSize(cropRect.sw, cropRect.sh, 1920);
-          const outputCanvas = document.createElement('canvas');
-          const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true });
-
-          renderCanvas(outputCanvas, outputCtx, outputBounds.width, outputBounds.height);
-
-          canvasToBlob(outputCanvas, outputType, outputType === 'image/png' ? undefined : 0.92)
-            .then((blob) => {
-              const cleanName = sourceFileName.replace(/\.[^/.]+$/, '') || 'imagem';
-              const extension = outputType === 'image/png'
-                ? 'png'
-                : outputType === 'image/jpeg'
-                  ? 'jpg'
-                  : 'webp';
-              const editedFile = new File(
-                [blob],
-                `${cleanName}-editada.${extension}`,
-                { type: outputType, lastModified: Date.now() }
-              );
-              close(editedFile);
-            })
-            .catch((error) => {
-              console.error('Erro ao aplicar edição:', error);
-              alert(`Erro ao aplicar edição: ${error.message}`);
-              applying = false;
-              applyButton.disabled = false;
-            });
         }
         return;
       }
@@ -694,7 +1033,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sourceImage = loaded.img;
         sourceObjectUrl = loaded.objectUrl;
         sourceFileName = options.fileName || file.name || 'imagem';
-        outputType = options.outputType || 'image/webp';
         resetSettingsForCurrentImage();
         syncControlsFromSettings();
         renderPreview();
@@ -775,7 +1113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const baseName = `produto-${productId || 'item'}-imagem`;
       const sourceFile = await urlToImageFile(img.src, baseName);
-      const editedFile = await imageEditor.open(sourceFile, { outputType: 'image/webp' });
+      const editedFile = await imageEditor.open(sourceFile);
       if (!editedFile) {
         if (statusEl) statusEl.textContent = previousStatus;
         return;
@@ -1077,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', () => {
         editButton.disabled = true;
         try {
           const currentFile = selectedFiles[index];
-          const editedFile = await editor.open(currentFile, { outputType: 'image/webp' });
+          const editedFile = await editor.open(currentFile);
           if (editedFile) {
             selectedFiles[index] = editedFile;
             syncInputFiles();
