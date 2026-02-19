@@ -141,6 +141,8 @@ Observacao atual:
 - Excluir item com confirmacao.
 - Reordenacao de imagens por setas.
 - Marcacao de imagens para exclusao.
+- Edicao de imagem existente via botao de lapis (gera nova versao e marca a antiga para remocao).
+- Cards no mobile com quebra de linha forcada para evitar estouro lateral de texto.
 
 ## Adicionar item (`admin/novoitem.html`)
 
@@ -151,6 +153,23 @@ Observacao atual:
   - drag-and-drop
   - colar imagem via Ctrl+V/Cmd+V
   - preview e remocao antes do upload
+  - botao de lapis em cada preview para editar antes de enviar
+
+## Editor de imagem (admin)
+
+- Disponivel no picker de novas imagens e nas imagens ja existentes em edicao.
+- Abertura por botao de lapis (fluxo opcional; nao bloqueia upload direto).
+- Recursos:
+  - recorte por `tamanho horizontal` e `tamanho vertical` (em pixels)
+  - limites maximos travados na largura/altura reais da imagem
+  - posicao horizontal/vertical da area recortada
+  - brilho, contraste, saturacao e nitidez
+- UX:
+  - preview da imagem fica fixa no modal
+  - scroll fica concentrado no painel de trilhos/controles
+  - ao abrir novo arquivo, o painel de trilhos volta para o topo
+- Saida:
+  - imagem editada gerada no cliente e enviada em WebP
 
 ## Upload de imagens (admin)
 
@@ -331,6 +350,7 @@ Acessos:
 7. Edicao admin atualiza dados e imagens.
 8. Exclusao remove item da planilha (e pasta/imagens quando aplicavel).
 9. `doGet?format=meta` retorna CSV valido para ingestao no Meta Catalog.
+10. Editor de imagem abre pelo lapis, aplica ajustes e salva nova versao corretamente.
 
 ## Licenca
 

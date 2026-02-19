@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
+  const imageEditor = createImageEditor();
 
   const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
@@ -246,6 +247,551 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function setImageMarkedForDeletion(imageItem, shouldMark) {
+    if (!imageItem) return;
+    imageItem.classList.toggle('marked-for-deletion', Boolean(shouldMark));
+
+    const deleteButton = imageItem.querySelector('.btn-img-delete');
+    if (!deleteButton) return;
+
+    const icon = deleteButton.querySelector('i');
+    const isMarked = imageItem.classList.contains('marked-for-deletion');
+
+    deleteButton.title = isMarked ? 'Desfazer marcação' : 'Marcar para remover';
+    icon?.classList.toggle('fa-trash', !isMarked);
+    icon?.classList.toggle('fa-undo', isMarked);
+  }
+
+  function createImageEditor() {
+    const defaults = {
+      cropWidth: null,
+      cropHeight: null,
+      offsetX: 0,
+      offsetY: 0,
+      brightness: 0,
+      contrast: 0,
+      saturation: 0,
+      sharpness: 0
+    };
+
+    const modal = document.createElement('div');
+    modal.className = 'image-editor-modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+      <div class="image-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="image-editor-title">
+        <div class="image-editor-header">
+          <h3 id="image-editor-title">Editar imagem</h3>
+          <button type="button" class="image-editor-close" data-action="cancel" aria-label="Fechar editor">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="image-editor-body">
+          <div class="image-editor-canvas-wrap">
+            <canvas class="image-editor-canvas" width="640" height="480"></canvas>
+          </div>
+          <div class="image-editor-controls">
+            <label>
+              Tamanho horizontal: <output data-output="cropWidth">-</output>
+              <input type="range" data-control="cropWidth" min="1" max="100" step="1" value="100">
+            </label>
+            <label>
+              Tamanho vertical: <output data-output="cropHeight">-</output>
+              <input type="range" data-control="cropHeight" min="1" max="100" step="1" value="100">
+            </label>
+            <label>
+              Posição horizontal: <output data-output="offsetX">0</output>
+              <input type="range" data-control="offsetX" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              Posição vertical: <output data-output="offsetY">0</output>
+              <input type="range" data-control="offsetY" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              Brilho: <output data-output="brightness">0</output>
+              <input type="range" data-control="brightness" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              Contraste: <output data-output="contrast">0</output>
+              <input type="range" data-control="contrast" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              Saturação: <output data-output="saturation">0</output>
+              <input type="range" data-control="saturation" min="-100" max="100" step="1" value="0">
+            </label>
+            <label>
+              Nitidez: <output data-output="sharpness">0%</output>
+              <input type="range" data-control="sharpness" min="0" max="100" step="1" value="0">
+            </label>
+          </div>
+        </div>
+        <div class="image-editor-footer">
+          <button type="button" class="btn btn-ghost" data-action="reset">Resetar</button>
+          <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
+          <button type="button" class="btn btn-primary" data-action="apply">Aplicar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const canvas = modal.querySelector('.image-editor-canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const applyButton = modal.querySelector('[data-action="apply"]');
+    const controlsPanel = modal.querySelector('.image-editor-controls');
+    const controls = {
+      cropWidth: modal.querySelector('[data-control="cropWidth"]'),
+      cropHeight: modal.querySelector('[data-control="cropHeight"]'),
+      offsetX: modal.querySelector('[data-control="offsetX"]'),
+      offsetY: modal.querySelector('[data-control="offsetY"]'),
+      brightness: modal.querySelector('[data-control="brightness"]'),
+      contrast: modal.querySelector('[data-control="contrast"]'),
+      saturation: modal.querySelector('[data-control="saturation"]'),
+      sharpness: modal.querySelector('[data-control="sharpness"]')
+    };
+    const outputs = {
+      cropWidth: modal.querySelector('[data-output="cropWidth"]'),
+      cropHeight: modal.querySelector('[data-output="cropHeight"]'),
+      offsetX: modal.querySelector('[data-output="offsetX"]'),
+      offsetY: modal.querySelector('[data-output="offsetY"]'),
+      brightness: modal.querySelector('[data-output="brightness"]'),
+      contrast: modal.querySelector('[data-output="contrast"]'),
+      saturation: modal.querySelector('[data-output="saturation"]'),
+      sharpness: modal.querySelector('[data-output="sharpness"]')
+    };
+
+    let sourceImage = null;
+    let sourceObjectUrl = null;
+    let sourceFileName = 'imagem';
+    let outputType = 'image/webp';
+    let resolvePending = null;
+    let settings = { ...defaults };
+    let applying = false;
+
+    const revokeSourceUrl = () => {
+      if (!sourceObjectUrl) return;
+      URL.revokeObjectURL(sourceObjectUrl);
+      sourceObjectUrl = null;
+    };
+
+    const close = (result = null) => {
+      const activeElement = document.activeElement;
+      if (activeElement && modal.contains(activeElement) && typeof activeElement.blur === 'function') {
+        activeElement.blur();
+      }
+
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('is-modal-open');
+      if (controlsPanel) controlsPanel.scrollTop = 0;
+      applying = false;
+      applyButton.disabled = false;
+      const resolver = resolvePending;
+      resolvePending = null;
+      if (resolver) resolver(result);
+      revokeSourceUrl();
+      sourceImage = null;
+    };
+
+    const getSourceSize = () => {
+      if (!sourceImage) return null;
+      return {
+        width: sourceImage.naturalWidth || sourceImage.width,
+        height: sourceImage.naturalHeight || sourceImage.height
+      };
+    };
+
+    const resetSettingsForCurrentImage = () => {
+      const sourceSize = getSourceSize();
+      settings = {
+        ...defaults,
+        cropWidth: sourceSize ? sourceSize.width : null,
+        cropHeight: sourceSize ? sourceSize.height : null
+      };
+    };
+
+    const getCropRect = () => {
+      const sourceSize = getSourceSize();
+      if (!sourceSize) return null;
+
+      const cropWidth = clamp(
+        Number(settings.cropWidth || sourceSize.width),
+        1,
+        sourceSize.width
+      );
+      const cropHeight = clamp(
+        Number(settings.cropHeight || sourceSize.height),
+        1,
+        sourceSize.height
+      );
+
+      const maxStartX = sourceSize.width - cropWidth;
+      const maxStartY = sourceSize.height - cropHeight;
+      const offsetFactorX = (settings.offsetX + 100) / 200;
+      const offsetFactorY = (settings.offsetY + 100) / 200;
+
+      return {
+        sx: Math.round(maxStartX * offsetFactorX),
+        sy: Math.round(maxStartY * offsetFactorY),
+        sw: Math.round(cropWidth),
+        sh: Math.round(cropHeight),
+        sourceWidth: sourceSize.width,
+        sourceHeight: sourceSize.height
+      };
+    };
+
+    const updateOutputs = () => {
+      const cropRect = getCropRect();
+      if (cropRect) {
+        outputs.cropWidth.textContent = `${cropRect.sw}px / ${cropRect.sourceWidth}px`;
+        outputs.cropHeight.textContent = `${cropRect.sh}px / ${cropRect.sourceHeight}px`;
+      } else {
+        outputs.cropWidth.textContent = '-';
+        outputs.cropHeight.textContent = '-';
+      }
+      outputs.offsetX.textContent = String(settings.offsetX);
+      outputs.offsetY.textContent = String(settings.offsetY);
+      outputs.brightness.textContent = String(settings.brightness);
+      outputs.contrast.textContent = String(settings.contrast);
+      outputs.saturation.textContent = String(settings.saturation);
+      outputs.sharpness.textContent = `${settings.sharpness}%`;
+    };
+
+    const syncControlsFromSettings = () => {
+      const sourceSize = getSourceSize();
+      const maxCropWidth = sourceSize ? sourceSize.width : 100;
+      const maxCropHeight = sourceSize ? sourceSize.height : 100;
+
+      controls.cropWidth.min = '1';
+      controls.cropWidth.max = String(maxCropWidth);
+      controls.cropHeight.min = '1';
+      controls.cropHeight.max = String(maxCropHeight);
+
+      settings.cropWidth = clamp(Number(settings.cropWidth || maxCropWidth), 1, maxCropWidth);
+      settings.cropHeight = clamp(Number(settings.cropHeight || maxCropHeight), 1, maxCropHeight);
+
+      controls.cropWidth.value = String(settings.cropWidth);
+      controls.cropHeight.value = String(settings.cropHeight);
+      controls.offsetX.value = String(settings.offsetX);
+      controls.offsetY.value = String(settings.offsetY);
+      controls.brightness.value = String(settings.brightness);
+      controls.contrast.value = String(settings.contrast);
+      controls.saturation.value = String(settings.saturation);
+      controls.sharpness.value = String(settings.sharpness);
+      updateOutputs();
+    };
+
+    const syncSettingsFromControls = () => {
+      const sourceSize = getSourceSize();
+      const maxCropWidth = sourceSize ? sourceSize.width : 100;
+      const maxCropHeight = sourceSize ? sourceSize.height : 100;
+
+      settings.cropWidth = clamp(Number(controls.cropWidth.value), 1, maxCropWidth);
+      settings.cropHeight = clamp(Number(controls.cropHeight.value), 1, maxCropHeight);
+      settings.offsetX = clamp(Number(controls.offsetX.value), -100, 100);
+      settings.offsetY = clamp(Number(controls.offsetY.value), -100, 100);
+      settings.brightness = clamp(Number(controls.brightness.value), -100, 100);
+      settings.contrast = clamp(Number(controls.contrast.value), -100, 100);
+      settings.saturation = clamp(Number(controls.saturation.value), -100, 100);
+      settings.sharpness = clamp(Number(controls.sharpness.value), 0, 100);
+      updateOutputs();
+    };
+
+    const getRenderSize = (width, height, maxDimension = 1920) => {
+      if (width <= maxDimension && height <= maxDimension) {
+        return { width, height };
+      }
+      if (width > height) {
+        return {
+          width: maxDimension,
+          height: Math.round((height * maxDimension) / width)
+        };
+      }
+      return {
+        width: Math.round((width * maxDimension) / height),
+        height: maxDimension
+      };
+    };
+
+    const drawCroppedImage = (targetCtx, img, targetWidth, targetHeight) => {
+      const cropRect = getCropRect();
+      if (!cropRect) return;
+
+      targetCtx.drawImage(
+        img,
+        cropRect.sx,
+        cropRect.sy,
+        cropRect.sw,
+        cropRect.sh,
+        0,
+        0,
+        targetWidth,
+        targetHeight
+      );
+    };
+
+    const applySharpen = (targetCtx, width, height) => {
+      if (settings.sharpness <= 0) return;
+
+      const strength = settings.sharpness / 100;
+      const imageData = targetCtx.getImageData(0, 0, width, height);
+      const data = imageData.data;
+      const source = new Uint8ClampedArray(data);
+      const rowStride = width * 4;
+
+      for (let y = 1; y < height - 1; y += 1) {
+        for (let x = 1; x < width - 1; x += 1) {
+          const index = (y * width + x) * 4;
+          for (let channel = 0; channel < 3; channel += 1) {
+            const center = source[index + channel] * 5;
+            const up = source[index - rowStride + channel];
+            const down = source[index + rowStride + channel];
+            const left = source[index - 4 + channel];
+            const right = source[index + 4 + channel];
+            const sharpened = center - up - down - left - right;
+            const blended = source[index + channel] + (sharpened - source[index + channel]) * strength;
+            data[index + channel] = clamp(Math.round(blended), 0, 255);
+          }
+        }
+      }
+
+      targetCtx.putImageData(imageData, 0, 0);
+    };
+
+    const renderCanvas = (targetCanvas, targetCtx, width, height) => {
+      if (!sourceImage) return;
+
+      targetCanvas.width = width;
+      targetCanvas.height = height;
+      targetCtx.clearRect(0, 0, width, height);
+      targetCtx.imageSmoothingEnabled = true;
+      targetCtx.imageSmoothingQuality = 'high';
+      targetCtx.filter = `brightness(${100 + settings.brightness}%) contrast(${100 + settings.contrast}%) saturate(${100 + settings.saturation}%)`;
+      drawCroppedImage(targetCtx, sourceImage, width, height);
+      targetCtx.filter = 'none';
+      applySharpen(targetCtx, width, height);
+    };
+
+    const renderPreview = () => {
+      const cropRect = getCropRect();
+      if (!sourceImage || !cropRect) return;
+      const previewBounds = getRenderSize(cropRect.sw, cropRect.sh, 760);
+      renderCanvas(canvas, ctx, previewBounds.width, previewBounds.height);
+    };
+
+    const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        resolve({ img, objectUrl });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Não foi possível abrir esta imagem.'));
+      };
+      img.src = objectUrl;
+    });
+
+    const canvasToBlob = (targetCanvas, mimeType, quality = 0.92) => new Promise((resolve, reject) => {
+      targetCanvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Falha ao gerar imagem editada.'));
+          return;
+        }
+        resolve(blob);
+      }, mimeType, quality);
+    });
+
+    const controlInputs = Object.values(controls).filter(Boolean);
+    controlInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        syncSettingsFromControls();
+        renderPreview();
+      });
+    });
+
+    modal.addEventListener('click', (event) => {
+      const actionEl = event.target.closest('[data-action]');
+      if (actionEl) {
+        const action = actionEl.dataset.action;
+        if (action === 'cancel') {
+          close(null);
+          return;
+        }
+        if (action === 'reset') {
+          resetSettingsForCurrentImage();
+          syncControlsFromSettings();
+          renderPreview();
+          return;
+        }
+        if (action === 'apply') {
+          if (!sourceImage || applying) return;
+          applying = true;
+          applyButton.disabled = true;
+
+          const cropRect = getCropRect();
+          if (!cropRect) {
+            alert('Não foi possível calcular o recorte da imagem.');
+            applying = false;
+            applyButton.disabled = false;
+            return;
+          }
+
+          const outputBounds = getRenderSize(cropRect.sw, cropRect.sh, 1920);
+          const outputCanvas = document.createElement('canvas');
+          const outputCtx = outputCanvas.getContext('2d', { willReadFrequently: true });
+
+          renderCanvas(outputCanvas, outputCtx, outputBounds.width, outputBounds.height);
+
+          canvasToBlob(outputCanvas, outputType, outputType === 'image/png' ? undefined : 0.92)
+            .then((blob) => {
+              const cleanName = sourceFileName.replace(/\.[^/.]+$/, '') || 'imagem';
+              const extension = outputType === 'image/png'
+                ? 'png'
+                : outputType === 'image/jpeg'
+                  ? 'jpg'
+                  : 'webp';
+              const editedFile = new File(
+                [blob],
+                `${cleanName}-editada.${extension}`,
+                { type: outputType, lastModified: Date.now() }
+              );
+              close(editedFile);
+            })
+            .catch((error) => {
+              console.error('Erro ao aplicar edição:', error);
+              alert(`Erro ao aplicar edição: ${error.message}`);
+              applying = false;
+              applyButton.disabled = false;
+            });
+        }
+        return;
+      }
+
+      if (event.target === modal) {
+        close(null);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+        close(null);
+      }
+    });
+
+    return {
+      async open(file, options = {}) {
+        if (!file || !String(file.type || '').startsWith('image/')) return null;
+        if (resolvePending) {
+          resolvePending(null);
+          resolvePending = null;
+        }
+
+        revokeSourceUrl();
+        const loaded = await loadImageFromFile(file);
+        sourceImage = loaded.img;
+        sourceObjectUrl = loaded.objectUrl;
+        sourceFileName = options.fileName || file.name || 'imagem';
+        outputType = options.outputType || 'image/webp';
+        resetSettingsForCurrentImage();
+        syncControlsFromSettings();
+        renderPreview();
+        if (controlsPanel) controlsPanel.scrollTop = 0;
+
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('is-modal-open');
+        applyButton.disabled = false;
+        applying = false;
+
+        if (controlsPanel) {
+          controlsPanel.scrollTop = 0;
+          controlsPanel.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        requestAnimationFrame(() => {
+          if (controlsPanel) controlsPanel.scrollTop = 0;
+          requestAnimationFrame(() => {
+            if (controlsPanel) controlsPanel.scrollTop = 0;
+          });
+        });
+        controls.cropWidth?.focus({ preventScroll: true });
+
+        return new Promise((resolve) => {
+          resolvePending = resolve;
+        });
+      }
+    };
+  }
+
+  async function urlToImageFile(url, fallbackBaseName = 'imagem') {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Falha ao carregar imagem (${response.status}).`);
+    }
+    const blob = await response.blob();
+
+    let baseName = fallbackBaseName;
+    try {
+      const parsedUrl = new URL(url);
+      const fileSegment = parsedUrl.pathname.split('/').pop() || '';
+      const withoutExt = fileSegment.replace(/\.[^/.]+$/, '');
+      if (withoutExt) baseName = withoutExt;
+    } catch (error) {
+      // usa fallback
+    }
+
+    const safeBase = String(baseName).replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || fallbackBaseName;
+    const extension = blob.type === 'image/png'
+      ? 'png'
+      : blob.type === 'image/jpeg'
+        ? 'jpg'
+        : 'webp';
+
+    return new File(
+      [blob],
+      `${safeBase}.${extension}`,
+      { type: blob.type || 'image/webp', lastModified: Date.now() }
+    );
+  }
+
+  async function handleExistingImageEdit(editButton) {
+    const imageItem = editButton.closest('.image-item');
+    const img = imageItem?.querySelector('img');
+    if (!imageItem || !img?.src) return;
+
+    const card = editButton.closest('.card-list');
+    const productId = card?.dataset.id;
+    const picker = editImagePickers.get(String(productId || ''));
+    const statusEl = card?.querySelector('.card-status');
+    const previousStatus = statusEl?.textContent || '';
+
+    if (!picker) return;
+
+    editButton.disabled = true;
+    if (statusEl) statusEl.textContent = 'Abrindo editor de imagem...';
+
+    try {
+      const baseName = `produto-${productId || 'item'}-imagem`;
+      const sourceFile = await urlToImageFile(img.src, baseName);
+      const editedFile = await imageEditor.open(sourceFile, { outputType: 'image/webp' });
+      if (!editedFile) {
+        if (statusEl) statusEl.textContent = previousStatus;
+        return;
+      }
+
+      picker.addFiles([editedFile]);
+      setImageMarkedForDeletion(imageItem, true);
+      if (statusEl) statusEl.textContent = 'Imagem editada adicionada como nova imagem.';
+    } catch (error) {
+      console.error('Erro ao editar imagem existente:', error);
+      if (statusEl) statusEl.textContent = `Erro ao editar imagem: ${error.message}`;
+    } finally {
+      editButton.disabled = false;
+    }
+  }
+
   function handleProductAction(event) {
     const editButton = event.target.closest('.btn-edit');
     if (editButton) {
@@ -276,6 +822,13 @@ document.addEventListener('DOMContentLoaded', () => {
       handleDeleteProduct(deleteButton.dataset.id);
     }
 
+    const imgEditBtn = event.target.closest('.btn-img-edit');
+    if (imgEditBtn) {
+      event.preventDefault();
+      handleExistingImageEdit(imgEditBtn);
+      return;
+    }
+
     const imgDeleteBtn = event.target.closest('.btn-img-delete');
     if (imgDeleteBtn) {
       event.preventDefault();
@@ -288,16 +841,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Alterna a classe para marcar/desmarcar para exclusão
-      imageItem.classList.toggle('marked-for-deletion');
-
-      // Atualiza a UI do botão (ícone e título) para refletir o estado
-      const icon = imgDeleteBtn.querySelector('i');
       const isMarked = imageItem.classList.contains('marked-for-deletion');
-      
-      imgDeleteBtn.title = isMarked ? 'Desfazer marcação' : 'Marcar para remover';
-      icon?.classList.toggle('fa-trash', !isMarked);
-      icon?.classList.toggle('fa-undo', isMarked);
+      setImageMarkedForDeletion(imageItem, !isMarked);
     }
 
     const imgLeftBtn = event.target.closest('.btn-img-left');
@@ -376,7 +921,8 @@ document.addEventListener('DOMContentLoaded', () => {
     singleHint,
     multiHint,
     pasteTarget = null,
-    requiredWhenEmpty = false
+    requiredWhenEmpty = false,
+    editor = null
   }) {
     if (!imageInput || !dropzone || !previewList || !hintEl) return null;
 
@@ -432,6 +978,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return `
           <div class="preview-image-item">
             <img src="${url}" alt="${safeName}">
+            <button type="button" class="preview-image-edit" data-index="${index}" aria-label="Editar imagem ${safeName}">
+              <i class="fa-solid fa-pen" aria-hidden="true"></i>
+            </button>
             <button type="button" class="preview-image-remove" data-index="${index}" aria-label="Remover imagem ${safeName}">
               <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -513,7 +1062,37 @@ document.addEventListener('DOMContentLoaded', () => {
       addFiles(clipboardImages);
     };
 
-    const handlePreviewClick = (event) => {
+    const handlePreviewClick = async (event) => {
+      const editButton = event.target.closest('.preview-image-edit');
+      if (editButton) {
+        event.preventDefault();
+        const index = Number(editButton.dataset.index);
+        if (
+          Number.isNaN(index)
+          || index < 0
+          || index >= selectedFiles.length
+          || !editor
+        ) return;
+
+        editButton.disabled = true;
+        try {
+          const currentFile = selectedFiles[index];
+          const editedFile = await editor.open(currentFile, { outputType: 'image/webp' });
+          if (editedFile) {
+            selectedFiles[index] = editedFile;
+            syncInputFiles();
+            renderPreview();
+            updateHint();
+          }
+        } catch (error) {
+          console.error('Erro ao editar imagem:', error);
+          alert(`Erro ao editar imagem: ${error.message}`);
+        } finally {
+          editButton.disabled = false;
+        }
+        return;
+      }
+
       const removeButton = event.target.closest('.preview-image-remove');
       if (!removeButton) return;
 
@@ -542,6 +1121,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return {
       getFiles: () => selectedFiles.slice(),
+      addFiles: (files) => {
+        addFiles(files);
+      },
       clear: () => {
         selectedFiles = [];
         syncInputFiles();
@@ -575,7 +1157,8 @@ document.addEventListener('DOMContentLoaded', () => {
       singleHint: '1 imagem pronta para upload.',
       multiHint: '{count} imagens prontas para upload.',
       pasteTarget: document,
-      requiredWhenEmpty: true
+      requiredWhenEmpty: true,
+      editor: imageEditor
     });
 
     if (!picker) return;
@@ -602,7 +1185,8 @@ document.addEventListener('DOMContentLoaded', () => {
       emptyHint: 'Nenhuma nova imagem selecionada.',
       singleHint: '1 nova imagem pronta para upload.',
       multiHint: '{count} novas imagens prontas para upload.',
-      pasteTarget: document
+      pasteTarget: document,
+      editor: imageEditor
     });
 
     if (picker) {
@@ -993,6 +1577,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="image-item">
         <img src="${img}" alt="Imagem ${idx + 1}">
         <div class="image-actions">
+          <button type="button" class="btn-img-edit" title="Editar imagem"><i class="fa-solid fa-pen"></i></button>
           <button type="button" class="btn-img-left" title="Mover para esquerda"><i class="fa-solid fa-arrow-left"></i></button>
           <button type="button" class="btn-img-delete danger" title="Remover"><i class="fa-solid fa-trash"></i></button>
           <button type="button" class="btn-img-right" title="Mover para direita"><i class="fa-solid fa-arrow-right"></i></button>
@@ -1035,7 +1620,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div>
-          <label>Imagens Atuais (Arraste ou use setas)</label>
+          <label>Imagens Atuais (lápis para editar, setas para ordenar)</label>
           <div class="image-list">
             ${imagesHtml}
           </div>
