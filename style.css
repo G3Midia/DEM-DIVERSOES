@@ -372,13 +372,11 @@
     letter-spacing: 0.3px;
     line-height: 1.2;
     text-align: center;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transition: transform 0.25s ease;
   }
   
   .hero-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(240, 82, 156, 0.24);
   }
   
   @media (max-width: 768px) {
@@ -1288,6 +1286,7 @@
   /* NÃO força overflow visible no track (isso pesa no slider) */
   #carousel-related .splide__track {
     overflow: hidden;
+    padding-bottom: 20px;
   }
   
   /* Slide simples, sem centralizações pesadas */
@@ -1336,6 +1335,7 @@
   #carousel-all .splide__track,
   #carousel-decor .splide__track {
     overflow: hidden;
+    padding-bottom: 20px;
   }
   
   
@@ -1358,7 +1358,6 @@
     height: 60px;
     width: auto;
     margin-bottom: 20px;
-    filter: drop-shadow(0 6px 18px rgba(0,0,0,.4));
   }
   
   /* ÍCONES */
