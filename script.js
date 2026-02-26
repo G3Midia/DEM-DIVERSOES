@@ -1138,26 +1138,33 @@ document.addEventListener("DOMContentLoaded", () => {
     function initHomeSplides() {
       splideAll && splideAll.destroy(true);
       splideDecor && splideDecor.destroy(true);
-  
-      splideAll = new Splide("#carousel-all", {
-        type: "loop",
-        perPage: 3,
-        gap: "1rem",
-        pagination: false,
+
+      const touchSmoothOptions = {
+        type: "slide",
         perMove: 1,
         drag: true,
         noDrag: "",
-        speed: 800,
-        easing: "linear",
+        speed: 420,
+        rewindSpeed: 420,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        flickPower: 120,
+        flickMaxPages: 1,
         lazyLoad: "nearby",
         rewind: true,
+      };
+  
+      splideAll = new Splide("#carousel-all", {
+        ...touchSmoothOptions,
+        perPage: 3,
+        gap: "1rem",
+        pagination: false,
         breakpoints: {
           900: { perPage: 2 },
           600: {
             perPage: 1,
             focus: "center",
             trimSpace: false,
-            dragMinThreshold: { mouse: 0, touch: 6 },
+            dragMinThreshold: { mouse: 2, touch: 8 },
             padding: { left: "0.9rem", right: "0.9rem" },
             gap: "0.8rem",
           },
@@ -1167,24 +1174,17 @@ document.addEventListener("DOMContentLoaded", () => {
   
       if (carouselDecor && carouselDecor.style.display !== "none") {
         splideDecor = new Splide("#carousel-decor", {
-        type: "loop",
+        ...touchSmoothOptions,
         perPage: 3,
         gap: "1rem",
         pagination: false,
-        perMove: 1,
-        drag: true,
-        noDrag: "",
-        speed: 800,
-        easing: "linear",
-        lazyLoad: "nearby",
-        rewind: true,
         breakpoints: {
           900: { perPage: 2 },
           600: {
             perPage: 1,
             focus: "center",
             trimSpace: false,
-            dragMinThreshold: { mouse: 0, touch: 6 },
+            dragMinThreshold: { mouse: 2, touch: 8 },
             padding: { left: "0.9rem", right: "0.9rem" },
             gap: "0.8rem",
           },
@@ -1262,19 +1262,24 @@ document.addEventListener("DOMContentLoaded", () => {
       splideRelated && splideRelated.destroy(true);
   
       splideRelated = new Splide("#carousel-related", {
-        type: "loop",
+        type: "slide",
         perPage: 3,
         gap: "1rem",
         pagination: false,
         perMove: 1,
-        Speed: 1000,
-        easing: "linear",
+        speed: 420,
+        rewindSpeed: 420,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        flickPower: 120,
+        flickMaxPages: 1,
+        drag: true,
         lazyLoad: "nearby",
         rewind: true,
         breakpoints: {
           900: { perPage: 2 },
       600: {
         perPage: 1,
+        dragMinThreshold: { mouse: 2, touch: 8 },
         padding: { left: "1.5rem", right: "1.5rem" },
         gap: "0.8rem",
     }
