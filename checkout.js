@@ -4,6 +4,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const sheetUrl =
     "https://script.google.com/macros/s/AKfycbxgMNP1sis1Ew1gRs9W76jHD43pDlY2sFHy0hwhzelHbbX1q2fswYOM5y7MHIeWlnip/exec";
+  const firestoreProjectId = "dem-admin";
+  const firestoreApiKey = "AIzaSyAcBhdBMWQexpbvkBxmhFhZXLY5B4t_Ijk";
+  const firestoreCollectionPath = "products";
 
   const params = new URLSearchParams(window.location.search);
   const productsParam = params.get("products") || "";
@@ -33,10 +36,89 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const fetchCatalogMap = async () => {
     const map = new Map();
-    try {
+    const decodeFirestoreValue = (value) => {
+      if (!value || typeof value !== "object") return null;
+      if ("stringValue" in value) return value.stringValue;
+      if ("integerValue" in value) return value.integerValue;
+      if ("doubleValue" in value) return value.doubleValue;
+      if ("booleanValue" in value) return Boolean(value.booleanValue);
+      if ("timestampValue" in value) return value.timestampValue;
+      if ("nullValue" in value) return null;
+      if ("arrayValue" in value) {
+        const values = Array.isArray(value.arrayValue?.values)
+          ? value.arrayValue.values
+          : [];
+        return values.map((entry) => decodeFirestoreValue(entry));
+      }
+      if ("mapValue" in value) {
+        const mapFields = value.mapValue?.fields || {};
+        const result = {};
+        Object.keys(mapFields).forEach((key) => {
+          result[key] = decodeFirestoreValue(mapFields[key]);
+        });
+        return result;
+      }
+      return null;
+    };
+
+    const normalizeFirestoreDoc = (doc) => {
+      const fields = doc?.fields || {};
+      const parsed = {};
+      Object.keys(fields).forEach((key) => {
+        parsed[key] = decodeFirestoreValue(fields[key]);
+      });
+      const docName = String(doc?.name || "");
+      const docId = docName.split("/").pop() || "";
+      if (!parsed.id && docId) parsed.id = docId;
+      return parsed;
+    };
+
+    const fetchCatalogRowsFromFirestore = async () => {
+      const rows = [];
+      let pageToken = "";
+      let guard = 0;
+      const baseUrl =
+        `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(firestoreProjectId)}` +
+        `/databases/(default)/documents/${encodeURIComponent(firestoreCollectionPath)}`;
+
+      while (guard < 20) {
+        const params = new URLSearchParams();
+        params.set("pageSize", "500");
+        params.set("key", firestoreApiKey);
+        if (pageToken) params.set("pageToken", pageToken);
+        const url = `${baseUrl}?${params.toString()}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Firestore HTTP ${response.status}`);
+        const data = await response.json();
+        const documents = Array.isArray(data?.documents) ? data.documents : [];
+        documents.forEach((doc) => rows.push(normalizeFirestoreDoc(doc)));
+        pageToken = data?.nextPageToken || "";
+        if (!pageToken) break;
+        guard += 1;
+      }
+      return rows;
+    };
+
+    const fetchCatalogRowsFromLegacyApi = async () => {
       const response = await fetch(sheetUrl);
       const data = await response.json();
-      const rows = Array.isArray(data) ? data : data.data || [];
+      return Array.isArray(data) ? data : data.data || [];
+    };
+
+    const loadCatalogRows = async () => {
+      try {
+        return await fetchCatalogRowsFromFirestore();
+      } catch (firestoreError) {
+        console.warn(
+          "Falha ao carregar do Firestore. Usando fallback Apps Script.",
+          firestoreError
+        );
+        return fetchCatalogRowsFromLegacyApi();
+      }
+    };
+
+    try {
+      const rows = await loadCatalogRows();
       rows.forEach((row) => {
         const productId = String(row.id || row.Id || row.ID || "").trim();
         if (!productId) return;

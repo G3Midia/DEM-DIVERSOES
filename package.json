@@ -1,0 +1,26 @@
+{
+  "name": "dem-diversoes",
+  "version": "1.0.0",
+  "description": "Catalogo online de locacao para festas, com area publica (site), carrinho/checkout por WhatsApp e painel administrativo protegido por Firebase Auth.",
+  "main": "cart.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "import:firestore": "node scripts/import-sheet-to-firestore.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/G3Midia/DEM-DIVERSOES.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/G3Midia/DEM-DIVERSOES/issues"
+  },
+  "homepage": "https://github.com/G3Midia/DEM-DIVERSOES#readme",
+  "dependencies": {
+    "firebase-admin": "^13.6.1",
+    "node-fetch": "^2.7.0"
+  }
+}

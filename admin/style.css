@@ -311,6 +311,24 @@ form#product-form {
   margin-top: -8px;
 }
 
+.description-template-row {
+  margin-top: 8px;
+  gap: 10px;
+}
+
+.description-template-main {
+  min-width: 0;
+}
+
+#product-form .description-template-label,
+.card-edit-panel .description-template-label {
+  margin-bottom: 6px;
+}
+
+.description-template-hint {
+  margin-top: 6px;
+}
+
 #status {
   text-align: center;
   margin-top: 16px;

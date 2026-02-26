@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allProducts = [];
   let allSubcategories = [];
   const editImagePickers = new Map();
+  const productsCollection = db.collection('products');
   const SCROLL_ANCHOR_KEY = 'admin-scroll-anchor-id';
   const normalize = (value = '') =>
     String(value)
@@ -44,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
   const imageEditor = createImageEditor();
+  const DEFAULT_PRICE_LABEL = 'Valor sob consulta';
 
   const currentPage = window.location.pathname.split('/').pop().toLowerCase();
   const authStatusEl = document.getElementById('auth-status');
@@ -189,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('product-form');
     if (form) {
       setupImagePicker(form);
+      setupNewItemDescriptionTemplatePicker(form);
       form.addEventListener('submit', handleSaveProduct);
     }
   }
@@ -197,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (currentPage === 'index.html') {
     const productsContainer = document.getElementById('products');
     productsContainer?.addEventListener('click', handleProductAction);
+    productsContainer?.addEventListener('change', handleProductFieldChange);
 
     const searchInput = document.getElementById('search');
     searchInput?.addEventListener('input', (e) => {
@@ -1227,27 +1231,199 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function parseSubcategoriesValue(value) {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    return String(value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  function normalizePriceValue(value) {
+    const text = String(value || '').trim();
+    return text || DEFAULT_PRICE_LABEL;
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getDescriptionTemplates(products, excludedProductId = '') {
+    const excluded = String(excludedProductId || '').trim();
+    const unique = new Set();
+    (products || []).forEach((product) => {
+      if (excluded && String(product?.id || '') === excluded) return;
+      const description = String(product?.descricao || '').trim();
+      if (!description) return;
+      unique.add(description);
+    });
+    return Array.from(unique);
+  }
+
+  function buildDescriptionTemplateOptionsHtml(products, excludedProductId = '') {
+    const templates = getDescriptionTemplates(products, excludedProductId);
+    if (!templates.length) {
+      return '<option value="">Nenhuma descrição disponível</option>';
+    }
+
+    const baseOption = '<option value="">Selecione uma descrição existente</option>';
+    const options = templates.map((description) => {
+      const encoded = encodeURIComponent(description);
+      const compact = description.replace(/\s+/g, ' ').trim();
+      const label = compact.length > 100 ? `${compact.slice(0, 97)}...` : compact;
+      return `<option value="${encoded}">${escapeHtml(label)}</option>`;
+    });
+
+    return [baseOption, ...options].join('');
+  }
+
+  function applyDescriptionTemplate(targetTextarea, encodedTemplate) {
+    if (!targetTextarea || !encodedTemplate) return;
+    let template = '';
+    try {
+      template = decodeURIComponent(encodedTemplate);
+    } catch (error) {
+      template = '';
+    }
+    template = String(template || '').trim();
+    if (!template) return;
+
+    const currentValue = String(targetTextarea.value || '').trim();
+    targetTextarea.value = currentValue ? `${currentValue}\n\n${template}` : template;
+    targetTextarea.focus();
+  }
+
+  function refreshNewItemDescriptionTemplates() {
+    if (currentPage !== 'novoitem.html') return;
+    const select = document.getElementById('descricao-template-select');
+    if (!select) return;
+    select.innerHTML = buildDescriptionTemplateOptionsHtml(allProducts);
+  }
+
+  function setupNewItemDescriptionTemplatePicker(form) {
+    const textarea = form.querySelector('#descricao');
+    const select = form.querySelector('#descricao-template-select');
+    if (!textarea || !select) return;
+
+    const applySelectedTemplate = () => {
+      const encodedTemplate = String(select.value || '').trim();
+      if (!encodedTemplate) return;
+      applyDescriptionTemplate(textarea, encodedTemplate);
+      select.value = '';
+    };
+
+    select.addEventListener('change', applySelectedTemplate);
+  }
+
+  function handleProductFieldChange(event) {
+    const select = event.target.closest('.edit-desc-template-select');
+    if (!select) return;
+    const card = select.closest('.card-list');
+    const textarea = card?.querySelector('.edit-descricao');
+    if (!textarea) return;
+
+    const encodedTemplate = String(select.value || '').trim();
+    if (!encodedTemplate) return;
+    applyDescriptionTemplate(textarea, encodedTemplate);
+    select.value = '';
+  }
+
+  function collectSubcategories(products) {
+    const unique = new Set();
+    (products || []).forEach((product) => {
+      parseSubcategoriesValue(product?.subcategorias).forEach((sub) => unique.add(sub));
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  function toAdminProduct(raw = {}, fallbackId = '') {
+    const id = String(raw.id ?? fallbackId ?? '').trim();
+    return {
+      id,
+      nome: String(raw.nome || '').trim(),
+      categoria: String(raw.categoria || '').trim(),
+      subcategorias: parseSubcategoriesValue(raw.subcategorias),
+      preco: String(raw.preco || '').trim(),
+      descricao: String(raw.descricao || '').trim(),
+      imagens: Array.isArray(raw.imagens)
+        ? raw.imagens.map((img) => String(img).trim()).filter(Boolean)
+        : String(raw.imagens || '')
+            .split(',')
+            .map((img) => img.trim())
+            .filter(Boolean),
+    };
+  }
+
+  function toFirestoreProductDoc(product) {
+    return {
+      id: String(product.id || '').trim(),
+      nome: String(product.nome || '').trim(),
+      categoria: String(product.categoria || '').trim(),
+      subcategorias: parseSubcategoriesValue(product.subcategorias),
+      preco: String(product.preco || '').trim(),
+      descricao: String(product.descricao || '').trim(),
+      imagens: Array.isArray(product.imagens)
+        ? product.imagens.map((img) => String(img).trim()).filter(Boolean)
+        : [],
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+  }
+
+  function sortProductsByIdDesc(products) {
+    const parseNumericId = (value) => {
+      const text = String(value || '').trim();
+      if (!text) return Number.NEGATIVE_INFINITY;
+      const parsed = Number.parseInt(text, 10);
+      return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+    };
+
+    return [...(products || [])].sort((left, right) => {
+      const leftNum = parseNumericId(left?.id);
+      const rightNum = parseNumericId(right?.id);
+      if (leftNum !== rightNum) return rightNum - leftNum;
+      return String(right?.id || '').localeCompare(String(left?.id || ''), 'pt-BR');
+    });
+  }
+
+  async function getNextProductId() {
+    const snapshot = await productsCollection.get();
+    let maxId = 0;
+    snapshot.forEach((doc) => {
+      const docId = String(doc.data()?.id || doc.id || '').trim();
+      const parsed = Number.parseInt(docId, 10);
+      if (Number.isFinite(parsed) && parsed > maxId) {
+        maxId = parsed;
+      }
+    });
+    return String(maxId + 1);
+  }
+
   function loadAdminFormData(user) {
     if (allSubcategories.length > 0) {
       populateSubcategories(allSubcategories);
+      refreshNewItemDescriptionTemplates();
       return;
     }
 
-    user.getIdToken()
-      .then(token => {
-        return fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'getManagerData', token: token })
-        });
+    productsCollection
+      .get()
+      .then((snapshot) => {
+        const products = snapshot.docs.map((doc) =>
+          toAdminProduct(doc.data(), doc.id)
+        );
+        allProducts = sortProductsByIdDesc(products);
+        allSubcategories = collectSubcategories(products);
+        populateSubcategories(allSubcategories);
+        refreshNewItemDescriptionTemplates();
       })
-      .then(res => res.json())
-      .then(response => {
-        if (response.status === 'success') {
-          allSubcategories = response.data.subcategories || [];
-          populateSubcategories(allSubcategories);
-        }
-      })
-      .catch(err => console.error("Erro ao carregar categorias:", err));
+      .catch((err) => console.error('Erro ao carregar categorias:', err));
   }
 
   function createImagePicker({
@@ -1562,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById('status');
     const submitButton = form.querySelector('button[type="submit"]');
     const nome = form.querySelector('#nome').value.trim();
-    const preco = form.querySelector('#preco').value.trim();
+    const preco = normalizePriceValue(form.querySelector('#preco').value.trim());
 
     if (!nome) {
       statusEl.textContent = 'O nome do item é obrigatório.';
@@ -1575,19 +1751,9 @@ document.addEventListener('DOMContentLoaded', () => {
     statusEl.style.color = 'var(--muted)';
 
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error("Usuário não autenticado.");
-      const token = await user.getIdToken();
-
-      // 1. Pega o próximo ID do backend para usar no nome da pasta
+      // 1. Obtém o próximo ID no Firestore para manter URLs estáveis.
       statusEl.textContent = 'Obtendo ID do produto...';
-      const idResponse = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'getNextId', token })
-      });
-      const idResult = await idResponse.json();
-      if (idResult.status !== 'success') throw new Error(idResult.message || 'Falha ao obter ID.');
-      const newId = idResult.data.id;
+      const newId = await getNextProductId();
 
       // 2. Faz o upload das imagens com o nome da pasta correto
       const imageFiles = form.querySelector('#imagens').files;
@@ -1598,29 +1764,27 @@ document.addEventListener('DOMContentLoaded', () => {
         imageUrls = await uploadImages(imageFiles, folderName);
       }
 
-      // 3. Envia os dados para a planilha, incluindo o ID pré-definido
-      statusEl.textContent = 'Enviando dados para a planilha...';
+      // 3. Salva os dados no Firestore, incluindo o ID pré-definido.
+      statusEl.textContent = 'Salvando dados no Firestore...';
       const payload = {
         id: newId, // Envia o ID obtido para o backend
         nome: nome,
         categoria: form.querySelector('#categoria').value,
-        subcategorias: Array.from(form.querySelectorAll('input[name="subcategoria"]:checked')).map(cb => cb.value).join(', '),
+        subcategorias: Array.from(form.querySelectorAll('input[name="subcategoria"]:checked')).map(cb => cb.value),
         preco: preco,
         descricao: form.querySelector('#descricao').value,
         imagens: imageUrls,
       };
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'saveProduct', payload, token })
-      });
-      const result = await response.json();
-
-      if (result.status !== 'success') throw new Error(result.message);
+      await productsCollection.doc(String(newId)).set(toFirestoreProductDoc(payload), { merge: true });
 
       statusEl.textContent = `Produto "${nome}" salvo com sucesso!`;
       statusEl.style.color = 'var(--primary)';
       form.reset();
+      const priceField = form.querySelector('#preco');
+      if (priceField) priceField.value = DEFAULT_PRICE_LABEL;
+      allProducts = sortProductsByIdDesc([toAdminProduct(payload, payload.id), ...allProducts]);
+      refreshNewItemDescriptionTemplates();
 
     } catch (error) {
       statusEl.textContent = `Erro: ${error.message}`;
@@ -1804,29 +1968,20 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (!productsContainer) return;
 
-      globalStatusEl.textContent = 'Carregando itens da planilha...';
+      globalStatusEl.textContent = 'Carregando itens do Firestore...';
 
-      user.getIdToken()
-          .then(token => {
-              return fetch(API_URL, {
-              method: 'POST',
-              body: JSON.stringify({ action: 'getManagerData', token: token })
-              });
+      productsCollection
+          .get()
+          .then((snapshot) => {
+              const products = snapshot.docs.map((doc) => toAdminProduct(doc.data(), doc.id));
+              allProducts = sortProductsByIdDesc(products);
+              allSubcategories = collectSubcategories(allProducts);
+              renderAllProducts(allProducts);
+              globalStatusEl.textContent = `${allProducts.length} itens carregados.`;
           })
-          .then(res => res.json())
-          .then(response => {
-              if (response.status === 'success') {
-                  allProducts = response.data.products.reverse();
-                  allSubcategories = response.data.subcategories || [];
-                  renderAllProducts(allProducts);
-                  globalStatusEl.textContent = `${response.data.products.length} itens carregados.`;
-              } else {
-                  globalStatusEl.textContent = 'Erro: ' + response.message;
-              }
-          })
-          .catch(err => {
-              console.error("Erro detalhado:", err);
-              globalStatusEl.textContent = 'Erro de conexão ou autenticação. Verifique o console.';
+          .catch((err) => {
+              console.error('Erro detalhado:', err);
+              globalStatusEl.textContent = 'Erro ao carregar do Firestore. Verifique o console.';
           });
   }
 
@@ -1836,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
       editImagePickers.clear();
 
       if (!products || products.length === 0) {
-          container.innerHTML = '<p style="text-align:center; color: var(--muted);">Nenhum item encontrado na planilha.</p>';
+          container.innerHTML = '<p style="text-align:center; color: var(--muted);">Nenhum item encontrado no Firestore.</p>';
           return;
       }
       
@@ -1924,6 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
     `).join('');
+    const descriptionTemplateOptions = buildDescriptionTemplateOptionsHtml(allProducts, product.id);
 
     const panelHtml = `
       <div class="card-edit-panel">
@@ -1934,7 +2090,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div>
             <label>Preço</label>
-            <input type="text" class="edit-preco" value="${product.preco}">
+            <input type="text" class="edit-preco" value="${escapeHtml(normalizePriceValue(product.preco))}">
           </div>
         </div>
 
@@ -1957,6 +2113,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div>
           <label>Descrição</label>
           <textarea class="edit-descricao">${product.descricao}</textarea>
+          <div class="field-grid description-template-row" style="margin-top: 8px;">
+            <div class="description-template-main">
+              <label class="description-template-label">Reaproveitar descrição (opcional)</label>
+              <select class="edit-desc-template-select">
+                ${descriptionTemplateOptions}
+              </select>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -2000,12 +2164,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = card.querySelector('.btn-save-changes');
     
     const nome = card.querySelector('.edit-nome').value.trim();
-    const preco = card.querySelector('.edit-preco').value.trim();
+    const preco = normalizePriceValue(card.querySelector('.edit-preco').value.trim());
     const categoria = card.querySelector('.edit-categoria').value;
     const descricao = card.querySelector('.edit-descricao').value.trim();
     
     // Nova lógica para pegar os chips na edição também
-    const subcategorias = Array.from(card.querySelectorAll('.edit-sub-check:checked')).map(cb => cb.value).join(', ');
+    const subcategorias = Array.from(card.querySelectorAll('.edit-sub-check:checked')).map(cb => cb.value);
 
     const imagesToDelete = Array.from(card.querySelectorAll('.image-item.marked-for-deletion img')).map(img => img.src);
     const existingImages = Array.from(card.querySelectorAll('.image-item:not(.marked-for-deletion) img')).map(img => img.src);
@@ -2058,23 +2222,14 @@ document.addEventListener('DOMContentLoaded', () => {
         imagens: finalImages
       };
 
-      statusEl.textContent = 'Atualizando planilha...';
-      
-      const user = auth.currentUser;
-      const token = await user.getIdToken();
-
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'updateProduct', payload, token })
-      });
-      const result = await response.json();
-
-      if (result.status !== 'success') throw new Error(result.message);
+      statusEl.textContent = 'Atualizando Firestore...';
+      await productsCollection.doc(String(productId)).set(toFirestoreProductDoc(payload), { merge: true });
 
       const productIndex = allProducts.findIndex(p => String(p.id) === String(productId));
       if (productIndex !== -1) {
-        allProducts[productIndex] = { ...allProducts[productIndex], ...payload };
+        allProducts[productIndex] = toAdminProduct({ ...allProducts[productIndex], ...payload }, productId);
       }
+      refreshNewItemDescriptionTemplates();
 
       toggleEditMode(productId);
       scrollToProduct(productId, 'auto');
@@ -2111,15 +2266,10 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       }
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'deleteProduct', payload: { id: productId }, token })
-      });
-      const result = await response.json();
-
-      if (result.status !== 'success') throw new Error(result.message);
+      await productsCollection.doc(String(productId)).delete();
 
       allProducts = allProducts.filter(p => String(p.id) !== String(productId));
+      allSubcategories = collectSubcategories(allProducts);
       destroyEditImagePicker(productId);
       card.remove();
       document.getElementById('global-status').textContent = `${allProducts.length} itens carregados.`;

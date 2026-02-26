@@ -1,1 +1,4 @@
 # Local admin config with secrets
+serviceAccountKey.json
+node_modules/
+.env

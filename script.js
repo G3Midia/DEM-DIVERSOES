@@ -9,6 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
   
     const sheetUrl =
       "https://script.google.com/macros/s/AKfycbxgMNP1sis1Ew1gRs9W76jHD43pDlY2sFHy0hwhzelHbbX1q2fswYOM5y7MHIeWlnip/exec";
+    const firestoreProjectId = "dem-admin";
+    const firestoreApiKey = "AIzaSyAcBhdBMWQexpbvkBxmhFhZXLY5B4t_Ijk";
+    const firestoreCollectionPath = "products";
+    const catalogCacheKey = "dm_catalog_rows_v1";
+    const catalogCacheTtlMs = 10 * 60 * 1000;
   
     /* ================= ELEMENTOS ================= */
     const allList = document.querySelector("#carousel-all .splide__list");
@@ -161,6 +166,136 @@ document.addEventListener("DOMContentLoaded", () => {
         return raw.slice(start, end).replace(/^[,\\s]+|[,\\s]+$/g, "").trim();
       });
       return urls.filter(Boolean);
+    };
+
+    const decodeFirestoreValue = (value) => {
+      if (!value || typeof value !== "object") return null;
+      if ("stringValue" in value) return value.stringValue;
+      if ("integerValue" in value) return value.integerValue;
+      if ("doubleValue" in value) return value.doubleValue;
+      if ("booleanValue" in value) return Boolean(value.booleanValue);
+      if ("timestampValue" in value) return value.timestampValue;
+      if ("nullValue" in value) return null;
+      if ("arrayValue" in value) {
+        const values = Array.isArray(value.arrayValue?.values)
+          ? value.arrayValue.values
+          : [];
+        return values.map((entry) => decodeFirestoreValue(entry));
+      }
+      if ("mapValue" in value) {
+        const mapFields = value.mapValue?.fields || {};
+        const result = {};
+        Object.keys(mapFields).forEach((key) => {
+          result[key] = decodeFirestoreValue(mapFields[key]);
+        });
+        return result;
+      }
+      return null;
+    };
+
+    const normalizeFirestoreDoc = (doc) => {
+      const fields = doc?.fields || {};
+      const parsed = {};
+      Object.keys(fields).forEach((key) => {
+        parsed[key] = decodeFirestoreValue(fields[key]);
+      });
+      const docName = String(doc?.name || "");
+      const docId = docName.split("/").pop() || "";
+      if (!parsed.id && docId) parsed.id = docId;
+      return parsed;
+    };
+
+    const fetchCatalogRowsFromFirestore = async () => {
+      const rows = [];
+      let pageToken = "";
+      let guard = 0;
+      const baseUrl =
+        `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(firestoreProjectId)}` +
+        `/databases/(default)/documents/${encodeURIComponent(firestoreCollectionPath)}`;
+
+      while (guard < 20) {
+        const params = new URLSearchParams();
+        params.set("pageSize", "500");
+        params.set("key", firestoreApiKey);
+        if (pageToken) params.set("pageToken", pageToken);
+        const url = `${baseUrl}?${params.toString()}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Firestore HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        const documents = Array.isArray(data?.documents) ? data.documents : [];
+        documents.forEach((doc) => rows.push(normalizeFirestoreDoc(doc)));
+        pageToken = data?.nextPageToken || "";
+        if (!pageToken) break;
+        guard += 1;
+      }
+      return rows;
+    };
+
+    const fetchCatalogRowsFromLegacyApi = async () => {
+      const res = await fetch(sheetUrl);
+      const data = await res.json();
+      return Array.isArray(data) ? data : (data.data || []);
+    };
+
+    const readCatalogCache = (allowStale = false) => {
+      try {
+        const raw = localStorage.getItem(catalogCacheKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const timestamp = Number(parsed?.timestamp || 0);
+        const rows = Array.isArray(parsed?.rows) ? parsed.rows : [];
+        if (!rows.length) return null;
+        const isFresh = Date.now() - timestamp <= catalogCacheTtlMs;
+        if (!allowStale && !isFresh) return null;
+        return rows;
+      } catch (error) {
+        return null;
+      }
+    };
+
+    const writeCatalogCache = (rows) => {
+      try {
+        localStorage.setItem(
+          catalogCacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            rows: Array.isArray(rows) ? rows : [],
+          })
+        );
+      } catch (error) {
+        // Ignore storage errors.
+      }
+    };
+
+    const loadCatalogRows = async () => {
+      const cachedFreshRows = readCatalogCache(false);
+      if (cachedFreshRows && cachedFreshRows.length) {
+        return cachedFreshRows;
+      }
+
+      const cachedStaleRows = readCatalogCache(true);
+      try {
+        const rows = await fetchCatalogRowsFromFirestore();
+        if (rows.length) writeCatalogCache(rows);
+        return rows;
+      } catch (firestoreError) {
+        console.warn(
+          "Falha ao carregar do Firestore. Usando fallback Apps Script.",
+          firestoreError
+        );
+        try {
+          const rows = await fetchCatalogRowsFromLegacyApi();
+          if (rows.length) writeCatalogCache(rows);
+          return rows;
+        } catch (legacyError) {
+          if (cachedStaleRows && cachedStaleRows.length) {
+            return cachedStaleRows;
+          }
+          throw legacyError;
+        }
+      }
     };
   
     const buildCloudinaryTransform = ({ width, height } = {}) => {
@@ -675,11 +810,8 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    fetch(sheetUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        // Suporta retorno como array direto ou objeto com propriedade 'data'
-        const rows = Array.isArray(data) ? data : (data.data || []);
+    loadCatalogRows()
+      .then((rows) => {
   
         rows.forEach((row) => {
           // Mapeia propriedades do JSON (suporta minúsculo ou maiúsculo)

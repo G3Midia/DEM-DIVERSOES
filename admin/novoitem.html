@@ -77,10 +77,19 @@
       <div class="hint">Toque para selecionar uma ou mais opções.</div>
 
       <label for="preco">Preço</label>
-      <input id="preco" type="text" />
+      <input id="preco" type="text" value="Valor sob consulta" />
 
       <label for="descricao">Descrição</label>
       <textarea id="descricao" rows="4"></textarea>
+      <div class="field-grid description-template-row">
+        <div class="description-template-main">
+          <label class="description-template-label" for="descricao-template-select">Reaproveitar descrição (opcional)</label>
+          <select id="descricao-template-select">
+            <option value="">Selecione uma descrição existente</option>
+          </select>
+          <div class="hint description-template-hint">Use a setinha para escolher uma descrição já cadastrada.</div>
+        </div>
+      </div>
 
       <label for="imagens">Imagens</label>
       <div id="image-dropzone" class="image-dropzone" tabindex="0" role="button" aria-label="Selecionar imagens do produto">
