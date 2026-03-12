@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const firestoreProjectId = "dem-admin";
     const firestoreApiKey = "AIzaSyAcBhdBMWQexpbvkBxmhFhZXLY5B4t_Ijk";
     const firestoreCollectionPath = "products";
-    const catalogCacheKey = "dm_catalog_rows_v1";
+    const catalogCacheKey = "dm_catalog_rows_v2";
     const catalogCacheTtlMs = 10 * 60 * 1000;
   
     /* ================= ELEMENTOS ================= */
@@ -117,6 +117,24 @@ document.addEventListener("DOMContentLoaded", () => {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim();
+
+    const parseNumericId = (value = "") => {
+      const text = String(value || "").trim();
+      if (!text) return Number.NEGATIVE_INFINITY;
+      const parsed = Number.parseInt(text, 10);
+      return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+    };
+
+    const sortProductsByIdDesc = (list = []) =>
+      [...(Array.isArray(list) ? list : [])].sort((left, right) => {
+        const leftNum = parseNumericId(left?.id);
+        const rightNum = parseNumericId(right?.id);
+        if (leftNum !== rightNum) return rightNum - leftNum;
+        return String(right?.id || "").localeCompare(
+          String(left?.id || ""),
+          "pt-BR"
+        );
+      });
   
     const CLOUDINARY_MARKER = "/image/upload/";
     const META_BRAND = "D&M Diversões";
@@ -270,16 +288,13 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const loadCatalogRows = async () => {
-      const cachedFreshRows = readCatalogCache(false);
-      if (cachedFreshRows && cachedFreshRows.length) {
-        return cachedFreshRows;
-      }
-
       const cachedStaleRows = readCatalogCache(true);
       try {
         const rows = await fetchCatalogRowsFromFirestore();
-        if (rows.length) writeCatalogCache(rows);
-        return rows;
+        if (rows.length) {
+          writeCatalogCache(rows);
+          return rows;
+        }
       } catch (firestoreError) {
         console.warn(
           "Falha ao carregar do Firestore. Usando fallback Apps Script.",
@@ -287,8 +302,10 @@ document.addEventListener("DOMContentLoaded", () => {
         );
         try {
           const rows = await fetchCatalogRowsFromLegacyApi();
-          if (rows.length) writeCatalogCache(rows);
-          return rows;
+          if (rows.length) {
+            writeCatalogCache(rows);
+            return rows;
+          }
         } catch (legacyError) {
           if (cachedStaleRows && cachedStaleRows.length) {
             return cachedStaleRows;
@@ -296,6 +313,12 @@ document.addEventListener("DOMContentLoaded", () => {
           throw legacyError;
         }
       }
+
+      if (cachedStaleRows && cachedStaleRows.length) {
+        return cachedStaleRows;
+      }
+
+      return [];
     };
   
     const buildCloudinaryTransform = ({ width, height } = {}) => {
@@ -962,8 +985,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         });
   
-        // Inverte a lista para que os itens mais recentes (últimos da planilha) apareçam primeiro
-        products.reverse();
+        // Ordena por ID numérico desc para manter itens novos no topo,
+        // independentemente da ordem retornada pelo Firestore.
+        products = sortProductsByIdDesc(products);
 
         /* ===== HOME ===== */
         if (allList) {
@@ -1039,7 +1063,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       })
       .catch((err) => {
-        console.error("Erro ao carregar produtos do Google Sheets:", err);
+        console.error("Erro ao carregar produtos do catalogo:", err);
         setCatalogState(
           "error",
           "Não foi possível carregar os itens disponíveis. Tente novamente em instantes."

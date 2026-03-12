@@ -15,6 +15,11 @@ const DEFAULT_FEED_CONDITION = "new";
 const DEFAULT_FEED_BRAND = "D&M Diversoes";
 const DEFAULT_FEED_QUANTITY = 999;
 const DEFAULT_FEED_MISSING_PRICE = 1;
+const DEFAULT_FIRESTORE_PROJECT_ID = "dem-admin";
+const DEFAULT_FIRESTORE_API_KEY = "AIzaSyAcBhdBMWQexpbvkBxmhFhZXLY5B4t_Ijk";
+const DEFAULT_FIRESTORE_COLLECTION_PATH = "products";
+const DEFAULT_FIRESTORE_PAGE_SIZE = 500;
+const MAX_FIRESTORE_PAGE_FETCHES = 20;
 
 // Função doGet para verificar se a API está online pelo navegador
 function doGet(e) {
@@ -178,6 +183,17 @@ function saveProduct(payload) {
 }
 
 function getProducts() {
+  try {
+    const firestoreProducts = getProductsFromFirestore_();
+    if (firestoreProducts.length) return sortProductsByIdDesc_(firestoreProducts);
+  } catch (error) {
+    console.error("Falha ao carregar catalogo do Firestore. Usando fallback da planilha.", error);
+  }
+
+  return sortProductsByIdDesc_(getProductsFromSheet_());
+}
+
+function getProductsFromSheet_() {
   const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
   if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
 
@@ -203,6 +219,157 @@ function getProducts() {
         .filter(Boolean),
     }))
     .filter((item) => item.id);
+}
+
+function getProductsFromFirestore_() {
+  const projectId = (getProp_("FIRESTORE_PROJECT_ID") || DEFAULT_FIRESTORE_PROJECT_ID)
+    .trim();
+  const apiKey = (getProp_("FIRESTORE_API_KEY") || DEFAULT_FIRESTORE_API_KEY)
+    .trim();
+  const collectionPath = (
+    getProp_("FIRESTORE_COLLECTION_PATH") || DEFAULT_FIRESTORE_COLLECTION_PATH
+  ).trim();
+
+  if (!projectId || !apiKey || !collectionPath) return [];
+
+  const encodedPath = collectionPath
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const baseUrl =
+    `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}` +
+    `/databases/(default)/documents/${encodedPath}`;
+
+  const products = [];
+  let pageToken = "";
+  let guard = 0;
+
+  while (guard < MAX_FIRESTORE_PAGE_FETCHES) {
+    const query = [
+      `pageSize=${DEFAULT_FIRESTORE_PAGE_SIZE}`,
+      `key=${encodeURIComponent(apiKey)}`,
+    ];
+    if (pageToken) query.push(`pageToken=${encodeURIComponent(pageToken)}`);
+
+    const response = UrlFetchApp.fetch(`${baseUrl}?${query.join("&")}`, {
+      method: "get",
+      muteHttpExceptions: true,
+      headers: { Accept: "application/json" },
+    });
+    const statusCode = response.getResponseCode();
+    const contentText = response.getContentText() || "{}";
+    if (statusCode >= 400) {
+      throw new Error(`Firestore ${statusCode}: ${contentText}`);
+    }
+
+    const data = JSON.parse(contentText);
+    const documents = Array.isArray(data.documents) ? data.documents : [];
+    documents.forEach((doc) => {
+      const product = normalizeFirestoreProduct_(doc);
+      if (product.id) products.push(product);
+    });
+
+    pageToken = String(data.nextPageToken || "").trim();
+    if (!pageToken) break;
+    guard += 1;
+  }
+
+  return products;
+}
+
+function normalizeFirestoreProduct_(doc) {
+  const fields = (doc && doc.fields) || {};
+  const parsed = {};
+  Object.keys(fields).forEach((key) => {
+    parsed[key] = decodeFirestoreValue_(fields[key]);
+  });
+
+  const docName = String((doc && doc.name) || "");
+  const docId = docName ? docName.split("/").pop() : "";
+  const rawId = parsed.id || docId;
+  const categoria = String(parsed.categoria || "").trim();
+
+  return {
+    id: formatId_(String(rawId || "").trim()),
+    nome: String(parsed.nome || "").trim(),
+    categoria: categoria,
+    google_product_category:
+      String(parsed.google_product_category || parsed.googleProductCategory || "").trim() ||
+      resolveGoogleProductCategory_(categoria),
+    subcategorias: normalizeFirestoreListValue_(parsed.subcategorias || parsed.subcategoria),
+    preco: String(parsed.preco || "").trim(),
+    descricao: String(parsed.descricao || "").trim(),
+    imagens: normalizeFirestoreListValue_(parsed.imagens),
+  };
+}
+
+function decodeFirestoreValue_(value) {
+  if (!value || typeof value !== "object") return null;
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return value.integerValue;
+  if ("doubleValue" in value) return value.doubleValue;
+  if ("booleanValue" in value) return Boolean(value.booleanValue);
+  if ("timestampValue" in value) return value.timestampValue;
+  if ("nullValue" in value) return null;
+  if ("arrayValue" in value) {
+    const values = Array.isArray(value.arrayValue && value.arrayValue.values)
+      ? value.arrayValue.values
+      : [];
+    return values.map((entry) => decodeFirestoreValue_(entry));
+  }
+  if ("mapValue" in value) {
+    const mapFields = (value.mapValue && value.mapValue.fields) || {};
+    const result = {};
+    Object.keys(mapFields).forEach((key) => {
+      result[key] = decodeFirestoreValue_(mapFields[key]);
+    });
+    return result;
+  }
+  return null;
+}
+
+function normalizeFirestoreListValue_(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) return [];
+
+  if (raw[0] === "[" && raw[raw.length - 1] === "]") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((item) => String(item || "").trim()).filter(Boolean);
+      }
+    } catch (error) {
+      // Ignora JSON invalido e continua para o parser simples.
+    }
+  }
+
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseNumericId_(value) {
+  const text = String(value || "").trim();
+  if (!text) return Number.NEGATIVE_INFINITY;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : Number.NEGATIVE_INFINITY;
+}
+
+function sortProductsByIdDesc_(products) {
+  return (products || []).slice().sort((left, right) => {
+    const leftNum = parseNumericId_(left && left.id);
+    const rightNum = parseNumericId_(right && right.id);
+    if (leftNum !== rightNum) return rightNum - leftNum;
+    return String((right && right.id) || "").localeCompare(
+      String((left && left.id) || ""),
+      "pt-BR"
+    );
+  });
 }
 
 function isMetaFeedRequest_(e) {
@@ -349,8 +516,34 @@ function csvEscape_(value) {
 }
 
 function getManagerData() {
-  const [products, subcategories] = [getProducts(), getSubcategories()];
+  const products = getProducts();
+  const subcategories = mergeUniqueSortedValues_(
+    getSubcategories(),
+    collectSubcategoriesFromProducts_(products)
+  );
   return { products: products, subcategories: subcategories };
+}
+
+function collectSubcategoriesFromProducts_(products) {
+  const values = [];
+  (products || []).forEach((product) => {
+    const subcategories = Array.isArray(product && product.subcategorias)
+      ? product.subcategorias
+      : [];
+    subcategories.forEach((subcategory) => values.push(subcategory));
+  });
+  return values;
+}
+
+function mergeUniqueSortedValues_(first, second) {
+  const unique = new Set();
+  [first || [], second || []].forEach((list) => {
+    list.forEach((value) => {
+      const cleaned = String(value || "").trim();
+      if (cleaned) unique.add(cleaned);
+    });
+  });
+  return Array.from(unique).sort((a, b) => a.localeCompare(b, "pt-BR"));
 }
 
 function updateProduct(payload) {
@@ -483,19 +676,15 @@ function deleteFolder(payload) {
 }
 
 function getNextId() {
-  const sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
-  if (!sheet) throw new Error("Aba nao encontrada: " + SHEET_NAME);
-  let nextId = 1;
-  const lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    const ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat();
-    // Filtra apenas números válidos e encontra o maior
-    const numericIds = ids.map(id => Number(id)).filter(n => !isNaN(n) && n > 0);
-    if (numericIds.length > 0) {
-      nextId = Math.max(...numericIds) + 1;
+  const products = getProducts();
+  let maxId = 0;
+  (products || []).forEach((product) => {
+    const parsed = parseNumericId_(product && product.id);
+    if (Number.isFinite(parsed) && parsed > maxId) {
+      maxId = parsed;
     }
-  }
-  return { id: formatId_(nextId) };
+  });
+  return { id: formatId_(maxId + 1) };
 }
 
 function getSubcategories() {

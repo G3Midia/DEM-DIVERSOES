@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editImagePickers = new Map();
   const productsCollection = db.collection('products');
   const SCROLL_ANCHOR_KEY = 'admin-scroll-anchor-id';
+  const PUBLIC_CATALOG_CACHE_KEYS = ['dm_catalog_rows_v1', 'dm_catalog_rows_v2'];
   const normalize = (value = '') =>
     String(value)
       .toLowerCase()
@@ -248,6 +249,16 @@ document.addEventListener('DOMContentLoaded', () => {
       requestAnimationFrame(() => {
         scrollToProduct(productId, 'auto');
       });
+    });
+  }
+
+  function invalidatePublicCatalogCache() {
+    PUBLIC_CATALOG_CACHE_KEYS.forEach((cacheKey) => {
+      try {
+        localStorage.removeItem(cacheKey);
+      } catch (error) {
+        // ignora falhas de storage
+      }
     });
   }
 
@@ -1780,6 +1791,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       statusEl.textContent = `Produto "${nome}" salvo com sucesso!`;
       statusEl.style.color = 'var(--primary)';
+      invalidatePublicCatalogCache();
       form.reset();
       const priceField = form.querySelector('#preco');
       if (priceField) priceField.value = DEFAULT_PRICE_LABEL;
@@ -2229,6 +2241,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (productIndex !== -1) {
         allProducts[productIndex] = toAdminProduct({ ...allProducts[productIndex], ...payload }, productId);
       }
+      invalidatePublicCatalogCache();
       refreshNewItemDescriptionTemplates();
 
       toggleEditMode(productId);
@@ -2268,6 +2281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       await productsCollection.doc(String(productId)).delete();
 
+      invalidatePublicCatalogCache();
       allProducts = allProducts.filter(p => String(p.id) !== String(productId));
       allSubcategories = collectSubcategories(allProducts);
       destroyEditImagePicker(productId);
