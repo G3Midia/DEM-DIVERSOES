@@ -505,6 +505,97 @@
     font-weight: 500;
   }
 
+  .partner-highlight {
+    padding-top: 10px;
+  }
+
+  .partner-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(260px, 380px);
+    gap: 24px;
+    align-items: center;
+    padding: 28px;
+    border-radius: 24px;
+    border: 1px solid var(--border-soft);
+    background:
+      radial-gradient(circle at top left, rgba(240, 82, 156, 0.2), transparent 40%),
+      linear-gradient(135deg, var(--surface-card-soft), var(--surface-3));
+    overflow: hidden;
+  }
+
+  .partner-eyebrow {
+    margin-bottom: 10px;
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .partner-title {
+    margin-bottom: 14px;
+  }
+
+  .partner-title-highlight,
+  .partner-title-secondary {
+    display: block;
+  }
+
+  .partner-title-highlight {
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.02;
+    margin-bottom: 8px;
+  }
+
+  .partner-title-secondary {
+    font-size: inherit;
+    line-height: 1.2;
+    color: var(--primary);
+  }
+
+  .partner-description {
+    max-width: 58ch;
+    margin-bottom: 22px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .partner-media {
+    position: relative;
+    display: block;
+    min-height: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    text-decoration: none;
+    border: 1px solid var(--border-soft);
+    background: var(--surface-2);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  .partner-media img {
+    width: 100%;
+    aspect-ratio: 4 / 4;
+    object-fit: cover;
+    display: block;
+  }
+
+  .partner-media span {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(18, 18, 24, 0.72);
+    color: #fff;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+  }
+
   .catalog-loading,
   .catalog-error {
     margin: 4px 0 16px;
@@ -563,6 +654,30 @@
 
     .decor-notice {
       margin-top: 10px;
+    }
+
+    .partner-highlight {
+      padding-top: 6px;
+    }
+
+    .partner-card {
+      grid-template-columns: 1fr;
+      gap: 18px;
+      padding: 20px;
+      border-radius: 20px;
+    }
+
+    .partner-title {
+      margin-bottom: 12px;
+    }
+
+    .partner-title-highlight {
+      font-size: clamp(1.8rem, 8vw, 2.6rem);
+      margin-bottom: 6px;
+    }
+
+    .partner-description {
+      margin-bottom: 18px;
     }
 
     .catalog-loading,
